@@ -97,7 +97,9 @@ MD5（Message Digest Algorithm 5），消息摘要算法第五版。
 
 **MD5可以用来生成数字签名，验证数据是否被篡改。**
 
-![](https://upload-images.jianshu.io/upload_images/1116725-25b89b93cecf4016.png?imageMogr2/auto-orient/strip|imageView2/2/w/866/format/webp)
+![](http://www.img.youngxy.top/Java/fig/MD5.webp)
+
+
 
 
 
@@ -111,15 +113,17 @@ MD5（Message Digest Algorithm 5），消息摘要算法第五版。
 
 ### 5.1对称加密算法有哪些？
 
-![](https://img-blog.csdnimg.cn/e031f2a27553479ca8d517175b7d9d38.jpeg)
-
-
+![](http://www.img.youngxy.top/Java/fig/duichen.jpeg)
 
 对称密码算法又叫传统密码算法，也就是加密密钥能够从解密密钥中推算出来，反过来也成立。在大多数对称算法中，加密解密密钥是相同的。常见的对称加密算法有：DES、IDEA、AES、SM1和SM4。
 
 ### 5.2非对称加密算法有哪些？
 
-![](https://img-blog.csdnimg.cn/cbaa88ac355a429fa6147e11b1021800.jpeg)
+![](http://www.img.youngxy.top/Java/fig/feiduichen.jpeg)
+
+
+
+
 
 非对称密钥也叫公开密钥加密,它是用两个数学相关的密钥对信息进行编码。在此系统中，其中一个密钥叫公开密钥，可随意发给期望同密钥持有者进行安全通信的人。公开密钥用于对信息加密。第二个密钥是私有密钥，属于密钥持有者，此人要仔细保存私有密钥。密钥持有者用私有密钥对收到的信息进行解密。常见的非对称加密算法有：RSA、ECC、SM2。
 

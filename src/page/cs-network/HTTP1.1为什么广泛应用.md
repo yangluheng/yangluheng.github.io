@@ -5,7 +5,7 @@ order: 10
 description: 计算机网络
 ---
 
-![](https://img-blog.csdnimg.cn/img_convert/0b59eaba42b578929cf4284114a73b94.png)
+![](http://www.img.youngxy.top/Java/fig/%E4%B8%BA%E4%BB%80%E4%B9%88HTTP2%E3%80%813%E4%B8%8D%E6%B5%81%E8%A1%8C.jpg)
 
 最近一段时间以来，关于HTTP/3的新闻有很多，越来越多的国际大公司已经开始使用HTTP/3了。
 
@@ -32,7 +32,7 @@ description: 计算机网络
 我默认大家对HTTP/2有了一定的基本了解。
 
 我们知道，HTTP/2的诞生，主要是为了解决HTTP/1.1中的效率问题，HTTP/2中最核心的技术就是多路复用技术，即允许同时通过单一的HTTP/2.0连接发起多重的请求-响应消息。
-![](https://img-blog.csdnimg.cn/img_convert/b4c1f312ac8e16edb503784d48ad1fbe.png)
+![](http://www.img.youngxy.top/Java/fig/http1.jpg)
 
 同时还实现了二进制分帧、header压缩、服务端推送等技术。
 

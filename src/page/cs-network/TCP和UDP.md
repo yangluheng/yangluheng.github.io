@@ -72,7 +72,7 @@ tag: 计算机网络
 
 ### 1.1TCP 头格式有哪些？
 
-![](https://cdn.xiaolincoding.com//mysql/other/format,png-20230309230534096.png)
+![](http://www.img.youngxy.top/Java/fig/tcp-format.webp)
 
 
 
@@ -152,7 +152,7 @@ $$
 
 ### 1.6UDP 和 TCP 有什么区别呢？分别的应用场景是？
 
-![UDP 头部格式](https://cdn.xiaolincoding.com//mysql/other/format,png-20230309230439961.png)
+![UDP 头部格式](http://www.img.youngxy.top/Java/fig/udp-format.webp)
 
 #### 1.6.1TCP 和 UDP 区别：
 
@@ -232,27 +232,71 @@ $$
 
 
 
-
-
 ## **2.TCP三次握手**
 
 ### 2.1TCP 三次握手过程是怎样的？
 
+
+
+
+
+
+
 ### 2.2如何在 Linux 系统中查看 TCP 状态？
+
+
+
+
+
+
 
 ### 2.3为什么是三次握手？不是两次、四次？
 
+
+
+
+
+
+
 ### 2.4为什么每次建立 TCP 连接时，初始化的序列号都要求不一样呢？
+
+
+
+
 
 ### 2.5初始序列号 ISN 是如何随机产生的？
 
+
+
+
+
+
+
 ### 2.6既然 IP 层会分片，为什么 TCP 层还需要 MSS 呢？
+
+
+
+
 
 ### 2.7第一次握手丢失了，会发生什么？
 
+
+
+
+
 ### 2.8第二次握手丢失了，会发生什么？
 
+
+
+
+
 ### 2.9第三次握手丢失了，会发生什么？
+
+
+
+
+
+
 
 ### 2.10什么是 SYN 攻击？如何避免 SYN 攻击？
 
