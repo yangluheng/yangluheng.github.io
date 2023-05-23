@@ -14,6 +14,8 @@ export default hopeTheme({
 
   logo: "/logo.svg",
 
+  favicon: "/logo.svg",
+
   repo: "yangluheng/yangluheng.github.io",
 
   docsDir: "",
