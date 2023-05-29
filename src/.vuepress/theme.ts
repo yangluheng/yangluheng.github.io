@@ -6,7 +6,7 @@ export default hopeTheme({
   hostname: "https://vuepress-theme-hope-docs-demo.netlify.app",
 
   author: {
-    name: "Young",
+    name: "杨大大",
     url: "https://github.com/yangluheng",
   },
 
@@ -71,7 +71,7 @@ export default hopeTheme({
       // @ts-expect-error: You should generate and use your own comment service
       provider: "Waline",
     },
-
+    copyright: true,
     // all features are enabled for demo, only preserve features you need here
     mdEnhance: {
       align: true,
