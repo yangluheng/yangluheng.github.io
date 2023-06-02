@@ -1,7 +1,7 @@
 ---
 lang: zh-CN
-title: 2.List
-order: 1
+title: 二、List
+order: 2
 description: Java基础
 ---
 

@@ -1,7 +1,7 @@
 ---
 lang: zh-CN
-title: 3.Set
-order: 1
+title: 三、Set
+order: 3
 description: Java基础
 ---
 
