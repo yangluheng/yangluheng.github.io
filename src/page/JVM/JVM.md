@@ -429,7 +429,7 @@ G1 收集器的运作大致可划分为以下几个步骤:
 
 这 7 个阶段的顺序如下图所示：
 
-![一个类的完整生命周期](https://oss.javaguide.cn/github/javaguide/java/jvm/lifecycle-of-a-class.png)
+![](http://www.img.youngxy.top/Java/fig/%E7%B1%BB%E7%9A%84%E7%94%9F%E5%91%BD%E5%91%A8%E6%9C%9F.png)
 
 
 
@@ -439,7 +439,7 @@ G1 收集器的运作大致可划分为以下几个步骤:
 
 系统加载 Class 类型的文件主要三步：**加载->连接->初始化**。连接过程又可分为三步：**验证->准备->解析**。
 
-![类加载过程](https://oss.javaguide.cn/github/javaguide/java/jvm/class-loading-procedure.png)
+![](http://www.img.youngxy.top/Java/fig/%E7%B1%BB%E7%9A%84%E5%8A%A0%E8%BD%BD%E8%BF%87%E7%A8%8B.png)
 
 
 
@@ -488,9 +488,7 @@ JVM 中内置了三个重要的 `ClassLoader`：
 
    如果我们不想打破双亲委派模型，就重写 `ClassLoader` 类中的 `findClass()` 方法即可，无法被父类加载器加载的类最终会通过这个方法被加载。但是，如果想打破双亲委派模型则需要重写 `loadClass()` 方法。
 
-   
-
-![类加载器层次关系图](https://oss.javaguide.cn/github/javaguide/java/jvm/class-loader-parents-delegation-model.png)
+   ![](http://www.img.youngxy.top/Java/fig/%E7%B1%BB%E5%8A%A0%E8%BD%BD%E5%99%A8%E6%80%BB%E7%BB%931.png)
 
 
 
@@ -504,7 +502,7 @@ JVM 中内置了三个重要的 `ClassLoader`：
 
 下图展示的各种类加载器之间的层次关系被称为类加载器的“**双亲委派模型(Parents Delegation Model)**”。
 
-![类加载器层次关系图](https://oss.javaguide.cn/github/javaguide/java/jvm/class-loader-parents-delegation-model.png)
+![](http://www.img.youngxy.top/Java/fig/%E7%B1%BB%E5%8A%A0%E8%BD%BD%E5%99%A8%E6%80%BB%E7%BB%931.png)
 
 双亲委派模型的实现代码非常简单，逻辑非常清晰，都集中在 `java.lang.ClassLoader` 的 `loadClass()` 中，相关代码如下所示。
 
