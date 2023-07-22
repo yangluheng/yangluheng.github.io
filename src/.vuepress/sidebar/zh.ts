@@ -16,9 +16,9 @@ export const zhSidebar = sidebar({
       children: "structure",
     },
      {
-      text: "多线程和高并发",
+      text: "多线程开发",
       icon: "note",
-      prefix: "page/duo-xian-cheng-gao-bing-fa/",
+      prefix: "page/duo-xian-cheng/",
       children: "structure",
     },
      {
