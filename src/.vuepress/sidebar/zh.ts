@@ -24,7 +24,7 @@ export const zhSidebar = sidebar({
      {
       text: "Java框架",
       icon: "note",
-      prefix: "page/Java-frame/",
+      prefix: "page/Java-framework/",
       children: "structure",
     },
      {
