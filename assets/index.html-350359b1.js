@@ -1,0 +1,1 @@
+import{_ as e}from"./plugin-vue_export-helper-c27b6911.js";import{o as n,c as t,a as o}from"./app-7acc75a8.js";const c={},s=o("p",null,"OpenAI：mykey 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",-1),_=[s];function r(a,l){return n(),t("div",null,_)}const m=e(c,[["render",r],["__file","index.html.vue"]]);export{m as default};
