@@ -1,19 +1,40 @@
 ---
 lang: zh-CN
 title: Kafka
-order: 8
+order: 1
 description: 消息中间件
 ---
 
+**Kafka 核心组件的基础概念：**
 
+1)Producer：即消息生产者，向 Kafka Broker 发消息的客户端。
 
-### 数据保存的策略
+2)Consumer：即消息消费者，从 Kafka Broker 读消息的客户端。
+
+3)Consumer Group：即消费者组，由多个 Consumer 组成。消费者组内每个消费者负责消费不同分区的数据，以提高消费能力。一个分区只能由组内一个消费者消费，不同消费者组之间互不影响。
+
+4)Broker：一台 Kafka 服务节点就是一个 Broker。一个集群是由1个或者多个 Broker 组成的，且一个 Broker 可以容纳多个 Topic。
+
+5)Topic：一个逻辑上的概念，Topic 将消息分类，生产者和消费者面向的都是同一个 Topic, 同一个 Topic 下的 Partition 的消息内容是不相同的。
+
+6)Partition：为了实现 Topic 扩展性，提高并发能力，一个非常大的 Topic 可以分布到多个 Broker 上，一个 Topic 可以分为多个 Partition 进行存储，且每个 Partition 是消息内容是有序的。
+
+7)Replica：即副本，为实现数据备份的功能，保证集群中的某个节点发生故障时，该节点上的 Partition 数据不丢失，且 Kafka 仍然能够继续工作，为此 Kafka 提供了副本机制，一个 Topic 的每个 Partition 都有若干个副本，一个 Leader 副本和若干个 Follower 副本。
+
+8)Leader：即每个分区多个副本的主副本，生产者发送数据的对象，以及消费者消费数据的对象，都是 Leader。
+
+9)Follower：即每个分区多个副本的从副本，会实时从 Leader 副本中同步数据，并保持和 Leader 数据的同步。Leader 发生故障时，某个 Follower 还会被选举并成为新的 Leader , 且不能跟 Leader 在同一个 Broker 上, 防止崩溃数据可恢复。
+
+10)Offset：消费者消费的位置信息，监控数据消费到什么位置，当消费者挂掉再重新恢复的时候，可以从消费位置继续消费。
+
+![](http://www.img.youngxy.top/Java/fig/kafka1.png)
+
+## 1.数据保存的策略
 
 kafka 有两种数据保存策略:
 
-1、按照过期时间保留
-
-2、按照存储的消息大小保留
+- 按照过期时间保留
+- 按照存储的消息大小保留
 
 Kafka Broker默认的消息保留策略是：要么保留一定时间，要么保留到消息达到一定大小的字节数。
 
@@ -23,16 +44,14 @@ topic可以配置自己的保留策略，可以将消息保留到不再使用他
 
 因为在一个大文件里查找和删除消息是很费时的事，也容易出错，所以，分区被划分为若干个片段。默认情况下，每个片段包含1G或者一周的数据，以较小的那个为准。在broker往leader分区写入消息时，如果达到片段上限，就关闭当前文件，并打开一个新文件。当前正在写入数据的片段叫活跃片段。当所有片段都被写满时，会清除下一个分区片段的数据，如果配置的是7个片段，每天打开一个新片段，就会删除一个最老的片段，循环使用所有片段。
 
-kafka 同时设置了 7 天和 10G 清除数据，到第五天的时候消息达到了 10G，这个时候 kafka 将如何处理？
+**kafka 同时设置了 7 天和 10G 清除数据，到第五天的时候消息达到了 10G，这个时候 kafka 将如何处理？**
 这个时候 kafka 会执行数据清除工作，时间和大小不论那个满足条件，都会清空数据。
 
+## 2.分区策略
 
+### 2.1生产者：
 
-### 分区策略
-
-##### 生产者：
-
-**为什么要分区**
+**为什么要分区**？
 
 1. 多Partition分布式存储，利于集群数据的均衡。
 2. 并发读写，加快读写速度。
@@ -44,7 +63,7 @@ kafka 同时设置了 7 天和 10G 清除数据，到第五天的时候消息达
 2. 没有指明partition，但是有key的情况下，将key的hash值与topic的partition数进行取余得到partition值；
 3. 既没有指定partition，也没有key的情况下，第一次调用时随机生成一个整数（后面每次调用在这个整数上自增），将这个值与topic可用的partition数取余得到partition值，也就是常说的round-robin算法。
 
-```
+```java
 public int partition(String topic, Object key, byte[] keyBytes, Object value, byte[] valueBytes, Cluster cluster) {
     List<PartitionInfo> partitions = cluster.partitionsForTopic(topic);
     int numPartitions = partitions.size();
@@ -84,7 +103,7 @@ private int nextValue(String topic) {
 
 
 
-##### 消费者：
+### 2.2消费者：
 
 **分区分配策略**
 
@@ -100,7 +119,7 @@ private int nextValue(String topic) {
 
 分区分配的算法如下：
 
-```
+```java
 @Override
 public Map<String, List<TopicPartition>> assign(Map<String, Integer> partitionsPerTopic,
                                                 Map<String, Subscription> subscriptions) {
@@ -150,8 +169,6 @@ public Map<String, List<TopicPartition>> assign(Map<String, Integer> partitionsP
 - **C1：**[T0P2，T1P2]
 - **C2：**[T0P3，T1P3]
 
-
-
 **RoundRobinAssignor**
 
 RoundRobinAssignor的分配策略是将消费组内订阅的所有Topic的分区及所有消费者进行排序后尽量均衡的分配（RangeAssignor是针对单个Topic的分区进行排序分配的）。如果消费组内，消费者订阅的Topic列表是相同的（每个消费者都订阅了相同的Topic），那么分配结果是尽量均衡的（消费者之间分配到的分区数的差值不会超过1）。如果订阅的Topic列表是不同的，那么分配结果是不保证“尽量均衡”的，因为某些消费者不参与一些Topic的分配。
@@ -166,7 +183,7 @@ RoundRobinAssignor的分配策略是将消费组内订阅的所有Topic的分区
 
 
 
-看上去分配已经尽量的保证均衡了，不过可以发现C2承担了4个分区的消费而C1订阅了T1，是不是把T1P1交给C1消费能更加的均衡呢？
+看上去分配已经尽量的保证均衡了，不过可以发现C2承担了4个分区的消费而C1订阅了T1，是不是把T1的P1交给C1消费能更加的均衡呢？
 
  **StickyAssignor**
 
@@ -196,68 +213,53 @@ StickyAssignor算法比较复杂，下面举例来说明分配的效果（对比
 
 
 
-### kafka如何保证消息不被重复消费
+## 3.kafka如何保证消息不被重复消费
 
-#### 原因
+### 3.1原因
 
 （1）kafka有个offset的概念，当每个消息被写进去后，都有一个offset，代表他的序号，然后consumer消费该数据之后，隔一段时间，会把自己消费过的消息的offset提交一下，代表我已经消费过了。下次我要是重启，就会继续从上次消费到的offset来继续消费。但是当我们直接kill进程了，再重启。这会导致consumer有些消息处理了，但是没来得及提交offset。等重启之后，少数消息就会再次消费一次
 （2）在Kafka中有一个Partition Balance机制，就是把多个Partition均衡的分配给多个消费者。消费端会从分配到的Partition里面去消费消息，如果消费者在默认的5分钟内没有处理完这一批消息。就会触发Kafka的Rebalance机制，从而导致offset自动提交失败。而Rebalance之后，消费者还是会从之前没提交的offset位置开始消费，从而导致消息重复消费。
 
-#### 解决方案
+### 3.2解决方案
 
 - **开启kafka本身存在的幂等性：**
+
+  acks=all和enable.idempotence=true来保证幂等性,这样 Producer 在重试发送消息时,Broker端就可以过滤重复消息。
 
   ![在这里插入图片描述](https://img-blog.csdnimg.cn/afb50c35d4dd4b14bd8f30929a494228.png)
 
   注： 添加唯一ID，类似于数据库的主键，用于唯一标记一个消息。
-   ProducerID：#在每个新的Producer初始化时，会被分配一个唯一的PID
-   SequenceNumber：#对于每个PID发送数据的每个Topic都对应一个从0开始单调递增的SN值。
 
-- **将获取的唯一id存表，（利用mySQl的唯一键约束，或者redis天然的set结构）**
+## 4.如何保证消息的顺序性?
 
-参考：https://blog.csdn.net/m0_51167384/article/details/128106266?spm=1001.2101.3001.6650.7&utm_medium=distribute.pc_relevant.none-task-blog-2%7Edefault%7EBlogCommendFromBaidu%7ERate-7-128106266-blog-76435385.235%5Ev28%5Epc_relevant_t0_download&depth_1-utm_source=distribute.pc_relevant.none-task-blog-2%7Edefault%7EBlogCommendFromBaidu%7ERate-7-128106266-blog-76435385.235%5Ev28%5Epc_relevant_t0_download&utm_relevant_index=8&ydreferer=aHR0cHM6Ly9ibG9nLmNzZG4ubmV0L3UwMTA2Mjc4NDAvYXJ0aWNsZS9kZXRhaWxzLzc2NDM1Mzg1P3NwbT0xMDAxLjIxMDEuMzAwMS42NjUwLjEmdXRtX21lZGl1bT1kaXN0cmlidXRlLnBjX3JlbGV2YW50Lm5vbmUtdGFzay1ibG9nLTIlN0VkZWZhdWx0JTdFQ1RSTElTVCU3RVJhdGUtMS03NjQzNTM4NS1ibG9nLTExNzQxOTA1OC4yMzUlNUV2MjglNUVwY19yZWxldmFudF90MF9kb3dubG9hZCZkZXB0aF8xLXV0bV9zb3VyY2U9ZGlzdHJpYnV0ZS5wY19yZWxldmFudC5ub25lLXRhc2stYmxvZy0yJTdFZGVmYXVsdCU3RUNUUkxJU1QlN0VSYXRlLTEtNzY0MzUzODUtYmxvZy0xMTc0MTkwNTguMjM1JTVFdjI4JTVFcGNfcmVsZXZhbnRfdDBfZG93bmxvYWQmdXRtX3JlbGV2YW50X2luZGV4PTI%3D
+### 4.1为什么要保证顺序？
 
+消息队列中的若干消息如果是对同一个数据进行操作, 这些操作具有前后关系, 必须要按前后的顺序执行, 否则就会造成数据异常。
 
+### 4.2出现顺序错乱的场景：
 
-### 如何保证消息的顺序性?
-
-#### 为什么要保证顺序？
-
-消息队列中的若干消息如果是对同一个数据进行操作, 这些操作具有前后关系, 必须要按前后的顺序执行, 否则就会造成数据异常.
-
-#### 出现顺序错乱的场景：
-
-    第一种情况:
-    一个queue, 有多个consumer去消费, 这样就会造成顺序的错误, consumer从MQ里面读取数据是有序的, 但是每个consumer的执行时间是不固定的, 无法保证先读到消息的consumer一定先完成操作, 这样就会出现消息并没有按照顺序执行, 造成数据顺序错误。
+**第一种情况:**
+一个queue, 有多个consumer去消费, 这样就会造成顺序的错误, consumer从MQ里面读取数据是有序的, 但是每个consumer的执行时间是不固定的, 无法保证先读到消息的consumer一定先完成操作, 这样就会出现消息并没有按照顺序执行, 造成数据顺序错误。
 
 ![img](https://img-blog.csdnimg.cn/cfe17769c1c949a4b6eced9fe3d68491.png?x-oss-process=image/watermark,type_d3F5LXplbmhlaQ,shadow_50,text_Q1NETiBA5Y-v54ix6L-35Lq6,size_20,color_FFFFFF,t_70,g_se,x_16)
 
-
-```
-第二种情况:
+**第二种情况:**
 
 一个queue对应一个consumer, 但是consumer里面进行了多线程消费, 这样也会造成消息消费顺序错误。
-```
 
 ![img](https://img-blog.csdnimg.cn/3fed5f0626084f83ae5aea89963d5fc6.png?x-oss-process=image/watermark,type_d3F5LXplbmhlaQ,shadow_50,text_Q1NETiBA5Y-v54ix6L-35Lq6,size_20,color_FFFFFF,t_70,g_se,x_16)
 
 #### 如何保证消息的消费顺序？
 
-```
-第一种方案:
-
-拆分多个queue, 每一个queue一个consumer, 就是多一些queue而已, 确实是麻烦点; 这样也会造成吞吐量下降, 可以在消费者内部采用多线程的方式去消费。
-```
+**第一种方案:**
+拆分多个queue, 每一个queue一个consumer
 
 ![img](https://img-blog.csdnimg.cn/f1e9445d6c5d411b9b9b385c70797fcc.png?x-oss-process=image/watermark,type_d3F5LXplbmhlaQ,shadow_50,text_Q1NETiBA5Y-v54ix6L-35Lq6,size_20,color_FFFFFF,t_70,g_se,x_16)
 
 
 
-```
-第二种方案:
-
-就是一个queue对应一个consumer, 然后这个consumer内部用内存队列做排队, 然后分发给底层不同的worker来处理。
-```
+**第二种方案:**
+一个queue对应一个consumer
 
 ![img](https://img-blog.csdnimg.cn/227a2d3b375e47e0aa171bd184ba7af1.png?x-oss-process=image/watermark,type_d3F5LXplbmhlaQ,shadow_50,text_Q1NETiBA5Y-v54ix6L-35Lq6,size_20,color_FFFFFF,t_70,g_se,x_16)
 
@@ -265,3 +267,30 @@ StickyAssignor算法比较复杂，下面举例来说明分配的效果（对比
 
 参考：https://blog.csdn.net/qq_44901983/article/details/123416498
 
+## 5.生产者有哪些发消息的模式?
+
+![](http://www.img.youngxy.top/Java/fig/kafka2.png)
+
+**发后即忘发送模式**
+
+发后即忘模式「fire-and-forget」，它只管发送消息，并不需要关心消息是否发送成功。其本质上也是一种异步发送的方式，消息先存储在缓冲区中，达到设定条件后再批量进行发送。这是 kafka 吞吐量最高的方式，但同时也是消息最不可靠的方式，因为对于发送失败的消息并没有做任何处理，某些异常情况下会导致消息丢失。
+
+```java
+ProducerRecord<k,v> record = new ProducerRecord<k,v>("this-topic", key, value);
+try {
+  //fire-and-forget 模式   
+  producer.send(record);
+} catch (Exception e) {
+  e.printStackTrace();
+}
+```
+
+**同步发送模式**
+
+同步发送模式 「sync」，调用 send() 方法会返回一个 Future 对象，再通过调用 Future 对象的 get() 方法，等待结果返回，根据返回的结果可以判断消息是否发送成功， 由于是同步发送会阻塞，只有当消息通过 get() 返回数据时，才会继续下一条消息的发送。
+
+**异步发送模式**
+
+异步发送模式「async」，在调用 send() 方法的时候指定一个 callback 函数，当 Broker 接收到返回的时候，该 callback 函数会被触发执行，通过回调函数能够对异常情况进行处理，当调用了回调函数时，只有回调函数执行完毕生产者才会结束，否则一直会阻塞。
+
+参考：https://ost.51cto.com/posts/11148
