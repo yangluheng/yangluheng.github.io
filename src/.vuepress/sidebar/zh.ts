@@ -52,9 +52,9 @@ export const zhSidebar = sidebar({
       children: "structure",
     },
      {
-      text: "Linux",
+      text: "开发者工具",
       icon: "note",
-      prefix: "page/Linux/",
+      prefix: "page/dev-tools/",
       children: "structure",
     },
      {
@@ -66,7 +66,7 @@ export const zhSidebar = sidebar({
      {
       text: "微服务、分布式",
       icon: "note",
-      prefix: "page/Spring-Cloud-distribution/",
+      prefix: "page/microservice-distribution/",
       children: "structure",
     },
      {
