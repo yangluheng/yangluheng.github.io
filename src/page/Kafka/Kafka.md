@@ -115,7 +115,7 @@ private int nextValue(String topic) {
 
  RangeAssignor对每个Topic进行独立的分区分配。对于每一个Topic，首先对分区按照分区ID进行排序，然后订阅这个Topic的消费组的消费者再进行排序，之后尽量均衡的将分区分配给消费者。这里只能是尽量均衡，因为分区数可能无法被消费者数量整除，那么有一些消费者就会多分配到一些分区。分配示意图如下：
 
-![f4108e1816b3087f38b546372e214958.png](https://img-blog.csdnimg.cn/img_convert/f4108e1816b3087f38b546372e214958.png)
+![](http://www.img.youngxy.top/Java/fig/kafka3.png)
 
 分区分配的算法如下：
 
@@ -159,7 +159,7 @@ public Map<String, List<TopicPartition>> assign(Map<String, Integer> partitionsP
 
 这种分配方式明显的一个问题是随着消费者订阅的Topic的数量的增加，不均衡的问题会越来越严重，比如上图中4个分区3个消费者的场景，C0会多分配一个分区。如果此时再订阅一个分区数为4的Topic，那么C0又会比C1、C2多分配一个分区，这样C0总共就比C1、C2多分配两个分区了，而且随着Topic的增加，这个情况会越来越严重。分配结果：
 
-![eff9adb5a086691e56b5d68bec68ffcf.png](https://img-blog.csdnimg.cn/img_convert/eff9adb5a086691e56b5d68bec68ffcf.png)
+![](http://www.img.youngxy.top/Java/fig/kafka4.png)
 
 
 
@@ -173,13 +173,13 @@ public Map<String, List<TopicPartition>> assign(Map<String, Integer> partitionsP
 
 RoundRobinAssignor的分配策略是将消费组内订阅的所有Topic的分区及所有消费者进行排序后尽量均衡的分配（RangeAssignor是针对单个Topic的分区进行排序分配的）。如果消费组内，消费者订阅的Topic列表是相同的（每个消费者都订阅了相同的Topic），那么分配结果是尽量均衡的（消费者之间分配到的分区数的差值不会超过1）。如果订阅的Topic列表是不同的，那么分配结果是不保证“尽量均衡”的，因为某些消费者不参与一些Topic的分配。
 
-![51b27d00cf50d9aca86e0934ab42a565.png](https://img-blog.csdnimg.cn/img_convert/51b27d00cf50d9aca86e0934ab42a565.png)
+![](http://www.img.youngxy.top/Java/fig/kafka5.png)
 
 
 
 以上两个topic的情况，相比于之前RangeAssignor的分配策略，可以使分区分配的更均衡。不过考虑这种情况，假设有三个消费者分别为C0、C1、C2，有3个Topic  T0、T1、T2，分别拥有1、2、3个分区，并且C0订阅T0，C1订阅T0和T1，C2订阅T0、T1、T2，那么RoundRobinAssignor的分配结果如下：
 
-![4e161a06a0afcae8d2c06603d676de4e.png](https://img-blog.csdnimg.cn/img_convert/4e161a06a0afcae8d2c06603d676de4e.png)
+![](http://www.img.youngxy.top/Java/fig/kafka6.png)
 
 
 
@@ -199,9 +199,7 @@ StickyAssignor算法比较复杂，下面举例来说明分配的效果（对比
 - 有4个Topic：T0、T1、T2、T3，每个Topic有2个分区。
 - 有3个Consumer：C0、C1、C2，所有Consumer都订阅了这4个分区。
 
-
-
-![eb5597ed0b81b03c762e54ff3f909492.png](https://img-blog.csdnimg.cn/img_convert/eb5597ed0b81b03c762e54ff3f909492.png)
+![](http://www.img.youngxy.top/Java/fig/kafka7.png)
 
 
 
@@ -226,8 +224,6 @@ StickyAssignor算法比较复杂，下面举例来说明分配的效果（对比
 
   acks=all和enable.idempotence=true来保证幂等性,这样 Producer 在重试发送消息时,Broker端就可以过滤重复消息。
 
-  ![在这里插入图片描述](https://img-blog.csdnimg.cn/afb50c35d4dd4b14bd8f30929a494228.png)
-
   注： 添加唯一ID，类似于数据库的主键，用于唯一标记一个消息。
 
 ## 4.如何保证消息的顺序性?
@@ -241,27 +237,27 @@ StickyAssignor算法比较复杂，下面举例来说明分配的效果（对比
 **第一种情况:**
 一个queue, 有多个consumer去消费, 这样就会造成顺序的错误, consumer从MQ里面读取数据是有序的, 但是每个consumer的执行时间是不固定的, 无法保证先读到消息的consumer一定先完成操作, 这样就会出现消息并没有按照顺序执行, 造成数据顺序错误。
 
-![img](https://img-blog.csdnimg.cn/cfe17769c1c949a4b6eced9fe3d68491.png?x-oss-process=image/watermark,type_d3F5LXplbmhlaQ,shadow_50,text_Q1NETiBA5Y-v54ix6L-35Lq6,size_20,color_FFFFFF,t_70,g_se,x_16)
+![](http://www.img.youngxy.top/Java/fig/kafka%E6%B6%88%E6%81%AF1.png)
 
 **第二种情况:**
 
 一个queue对应一个consumer, 但是consumer里面进行了多线程消费, 这样也会造成消息消费顺序错误。
 
-![img](https://img-blog.csdnimg.cn/3fed5f0626084f83ae5aea89963d5fc6.png?x-oss-process=image/watermark,type_d3F5LXplbmhlaQ,shadow_50,text_Q1NETiBA5Y-v54ix6L-35Lq6,size_20,color_FFFFFF,t_70,g_se,x_16)
+![](http://www.img.youngxy.top/Java/fig/kafka%E6%B6%88%E6%81%AF2.png)
 
 #### 如何保证消息的消费顺序？
 
 **第一种方案:**
 拆分多个queue, 每一个queue一个consumer
 
-![img](https://img-blog.csdnimg.cn/f1e9445d6c5d411b9b9b385c70797fcc.png?x-oss-process=image/watermark,type_d3F5LXplbmhlaQ,shadow_50,text_Q1NETiBA5Y-v54ix6L-35Lq6,size_20,color_FFFFFF,t_70,g_se,x_16)
+![](http://www.img.youngxy.top/Java/fig/kafka%E6%B6%88%E6%81%AF3.png)
 
 
 
 **第二种方案:**
 一个queue对应一个consumer
 
-![img](https://img-blog.csdnimg.cn/227a2d3b375e47e0aa171bd184ba7af1.png?x-oss-process=image/watermark,type_d3F5LXplbmhlaQ,shadow_50,text_Q1NETiBA5Y-v54ix6L-35Lq6,size_20,color_FFFFFF,t_70,g_se,x_16)
+![](http://www.img.youngxy.top/Java/fig/kafka%E6%B6%88%E6%81%AF4.png)
 
 
 

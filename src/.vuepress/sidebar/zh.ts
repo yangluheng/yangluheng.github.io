@@ -34,7 +34,7 @@ export const zhSidebar = sidebar({
       children: "structure",
     },
      {
-      text: "消息中间件Kafka",
+      text: "消息中间件",
       icon: "note",
       prefix: "page/Kafka/",
       children: "structure",
@@ -64,7 +64,7 @@ export const zhSidebar = sidebar({
       children: "structure",
     },
      {
-      text: "微服务Spring Cloud、分布式",
+      text: "微服务、分布式",
       icon: "note",
       prefix: "page/Spring-Cloud-distribution/",
       children: "structure",
