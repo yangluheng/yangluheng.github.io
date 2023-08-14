@@ -96,7 +96,7 @@ clone()的时候会把null值也拷贝。所以保存相同内容的Vector与Arr
 
 **分析：**
 
-ArrayList是非同步实现的一个单线程下较为高效的数据结构（相比Vector来说）。 ArrayList只通过一个修改记录字段提供弱一致性，主要用在迭代器里。没有同步方法。  即上面提到的Fast-fail机制.ArrayList的存储结构定义为transient，重写writeObject来实现自定义的序列化，优化了存储。
+ArrayList是非同步实现的一个单线程下较为高效的数据结构（相比Vector来说）。 ArrayList只通过一个修改记录字段提供弱一致性，主要用在迭代器里。没有同步方法。  即上面提到的Fast-fail机制。ArrayList的存储结构定义为transient，重写writeObject来实现自定义的序列化，优化了存储。
 
 Vector是多线程环境下更为可靠的数据结构，所有方法都实现了同步。
 
@@ -128,9 +128,9 @@ List list2 =  Collections.synchronizedList(list);
 Vector<String> list1 = new Vector<String>();
 ```
 
-### 3.1比较几个重要的方法。
+### 3.1比较几个重要的方法
 
-####  **3.1.1add方法：**
+####  3.1.1add方法：
 
 **Vector的实现：**
 

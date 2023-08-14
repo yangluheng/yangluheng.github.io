@@ -9,7 +9,7 @@ description: Java基础
 
 ::: info
 
-Collection 是一个集合接口。  它提供了对集合对象进行基本操作的通用接口方法。Collection接口在Java 类库中有很多具体的实现。是list，set等的父接口。
+Collection 是一个集合接口。它提供了对集合对象进行基本操作的通用接口方法。Collection接口在Java 类库中有很多具体的实现。是list，set等的父接口。
 
 :::
 
@@ -52,7 +52,7 @@ ArrayDeque实现了双端队列，内部使用循环数组实现，这决定了�
 - 根据元素内容查找和删除的效率比较低，为O(N)。
 - 与ArrayList和LinkedList不同，没有索引位置的概念，不能根据索引位置进行操作。
 
-ArrayDeque和LinkedList都实现了Deque接口，应该用哪一个呢？（详见：https://www.youngxy.top/page/Java-SE/3.%E6%95%B0%E6%8D%AE%E7%BB%93%E6%9E%84.html#java%E5%AE%98%E6%96%B9%E6%8E%A8%E8%8D%90%E7%9A%84%E5%AE%9E%E7%8E%B0%E6%96%B9%E5%BC%8F-deque）
+ArrayDeque和LinkedList都实现了Deque接口，应该用哪一个呢？（详见：https://www.youngxy.top/page/Java-SE/%E4%B8%83%E3%80%81%E6%95%B0%E6%8D%AE%E7%BB%93%E6%9E%84.html#java%E5%AE%98%E6%96%B9%E6%8E%A8%E8%8D%90%E7%9A%84%E5%AE%9E%E7%8E%B0%E6%96%B9%E5%BC%8F-deque）
 
 **如果只需要Deque接口，从两端进行操作，一般而言，ArrayDeque效率更高一些，应该被优先使用；如果同时需要根据索引位置进行操作，或者经常需要在中间进行插入和删除，则应该选LinkedList。**
 

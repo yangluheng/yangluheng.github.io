@@ -202,7 +202,7 @@ HashMap中size表示当前共有多少个KV对，capacity表示当前HashMap的�
 
 在Java中，保存数据有两种比较简单的数据结构：数组和链表。**数组的特点是：寻址容易，插入和删除困难；而链表的特点是：寻址困难，插入和删除容易。**上面我们提到过，常用的哈希函数的冲突解决办法中有一种方法叫做链地址法，其实就是将数组和链表组合在一起，发挥了两者的优势，我们可以将其理解为链表的数组。
 
-![640](http://www.hollischuang.com/wp-content/uploads/2018/03/640.png)
+![](http://www.img.youngxy.top/Java/fig/HashMap%20%E7%9A%84%E6%95%B0%E6%8D%AE%E7%BB%93%E6%9E%84.png)
 
 我们可以从上图看到，左边很明显是个数组，数组的每个成员是一个链表。该数据结构所容纳的所有元素均包含一个指针，用于元素间的链接。我们根据元素的自身特征把元素分配到不同的链表中去，反过来我们也正是通过这些特征找到正确的链表，再从链表中找出正确的元素。其中，根据元素特征计算元素数组下标的方法就是哈希算法，即本文的主角hash()函数（当然，还包括indexOf()函数）。
 
@@ -210,7 +210,7 @@ HashMap中size表示当前共有多少个KV对，capacity表示当前HashMap的�
 
 我们拿JDK 1.7的HashMap为例，其中定义了一个final int hash(Object k) 方法，其主要被以下方法引用。
 
-![hash-use](http://www.hollischuang.com/wp-content/uploads/2018/03/hash-use.png)
+![](http://www.img.youngxy.top/Java/fig/hash%E6%96%B9%E6%B3%95.png)
 
 上面的方法主要都是增加和删除方法，这不难理解，当我们要对一个链表数组中的某个元素进行增删的时候，首先要知道他应该保存在这个链表数组中的哪个位置，即他在这个数组中的下标。而hash()方法的功能就是根据Key来定位其在HashMap中的位置。HashTable、ConcurrentHashMap同理。
 
@@ -435,7 +435,7 @@ TreeMap与HashMap相比，TreeMap同样实现了Map接口，但内部使用红�
 
 - 按键有序，TreeMap同样实现了SortedMap和NavigableMap接口，可以方便地根据键的顺序进行查找，如第一个、最后一个、某一范围的键、邻近键等。
 
-- 为了按键有序，TreeMap要求键实现Comparable接口或通过构造方法提供一个Com-parator对象。
+- 为了按键有序，TreeMap要求键实现Comparable接口或通过构造方法提供一个Comparator对象。
 
 - 根据键保存、查找、删除的效率比较高，为O(h), h为树的高度，在树平衡的情况下，h为log2(N), N为节点数。
 
