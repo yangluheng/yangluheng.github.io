@@ -31,7 +31,7 @@ Java内存模型分为**主内存和线程工作内存**两大类。
 
 **硬件层面的内存屏障分为`Load Barrier` 和 `Store Barrier`即读屏障和写屏障**。
 
-- 对于Load Barrier来说，在指令前插入Load Barrier，可以让高速缓存中的数据失效，强制从新从主内存加载数据。
+- 对于Load Barrier来说，在指令前插入Load Barrier，可以让高速缓存中的数据失效，强制重新从主内存加载数据。
 - 对于Store Barrier来说，在指令后插入Store Barrier，能让写入缓存中的最新数据更新写入主内存，让其他线程可见。
 
 **Java内存屏障类型把上述两种内存屏障两两组合**，如下图所示：
@@ -71,7 +71,7 @@ Java内存模型分为**主内存和线程工作内存**两大类。
 
 ### 2.1synchronized 同步语句块的情况:
 
-**代码块形式：手动指定锁定对象，也可是是this,也可以是自定义的锁。**
+**代码块形式：手动指定锁定对象，可以是this,也可以是自定义的锁。**
 
 ```java
 public class SynchronizedDemo {
@@ -94,7 +94,7 @@ public class SynchronizedDemo {
 
 上面的字节码中包含一个 `monitorenter` 指令以及两个 `monitorexit` 指令，这是为了保证锁在同步代码块代码正常执行以及出现异常的这两种情况下都能被正确释放。
 
-当执行 `monitorenter` 指令时，线程试图获取锁也就是获取 **对象监视器 `monitor`** 的持有权。
+当执行 `monitorenter` 指令时，线程试图获取锁也就是获取**对象监视器 `monitor`** 的持有权。
 
 在 Java 虚拟机(HotSpot)中，Monitor 是基于 C++实现的，由ObjectMonitor实现的。每个对象中都内置了一个 `ObjectMonitor`对象。
 
@@ -108,7 +108,7 @@ public class SynchronizedDemo {
 
 ### 2.2synchronized 修饰方法的的情况:
 
-**方法锁形式：synchronized修饰普通方法，锁对象默认为this；synchronize修饰静态的方法或指定锁对象为Class对象**
+**方法锁形式：synchronized修饰普通方法，锁对象默认为this；synchronize修饰静态的方法或指定锁对象为Class对象**。
 
 ```java
 public class SynchronizedDemo2 {
@@ -166,7 +166,7 @@ public class Thread implements Runnable {
 
 ```
 
-从上面`Thread`类 源代码可以看出`Thread` 类中有一个 `threadLocals` 和 一个 `inheritableThreadLocals` 变量，它们都是 `ThreadLocalMap` 类型的变量,我们可以把 `ThreadLocalMap` 理解为`ThreadLocal` 类实现的定制化的 `HashMap`。默认情况下这两个变量都是 null，只有当前线程调用 `ThreadLocal` 类的 `set`或`get`方法时才创建它们，实际上调用这两个方法的时候，我们调用的是`ThreadLocalMap`类对应的 `get()`、`set()`方法。
+从上面`Thread`类源代码可以看出`Thread` 类中有一个 `threadLocals` 和 一个 `inheritableThreadLocals` 变量，它们都是 `ThreadLocalMap` 类型的变量,我们可以把 `ThreadLocalMap` 理解为`ThreadLocal` 类实现的定制化的 `HashMap`。默认情况下这两个变量都是 null，只有当前线程调用 `ThreadLocal` 类的 `set`或`get`方法时才创建它们，实际上调用这两个方法的时候，我们调用的是`ThreadLocalMap`类对应的 `get()`、`set()`方法。
 
 `ThreadLocal`类的`set()`方法：
 
