@@ -29,4 +29,4 @@ copyright: false
 footer: 使用 <a href="https://theme-hope.vuejs.press/" target="_blank">VuePress Theme Hope</a> 主题 | MIT 协议 ©鲁ICP备19028049号 2023-present 杨大大
 ---
 
-OpenAI：mykey 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
+**花有重开日，人无再少年**

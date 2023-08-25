@@ -22,7 +22,7 @@ description: Java框架
 **第 3 步：**
 获取需要自动装配的所有配置类，读取**META-INF/spring.factories**：
 
-**spring-boot/spring-boot-project/spring-boot-autoconfigure/src/main/resources/META-INF/spring.factories**
+spring-boot/spring-boot-project/spring-boot-autoconfigure/src/main/resources/META-INF/spring.factories
 
 ![](http://www.img.youngxy.top/Java/fig/springboot3.png)
 
@@ -30,6 +30,28 @@ description: Java框架
 不光是这个依赖下的META-INF/spring.factories被读取到，所有 Spring Boot Starter 下的META-INF/spring.factories都会被读取到。
 
 ![](http://www.img.youngxy.top/Java/fig/springboot4.png)
+
+
+
+**自动配置作为Spring Boot的核心功能之一,其原理主要包含以下四点:**
+
+- @SpringBootApplication注解
+
+这个注解包含了@ComponentScan、@Configuration和@EnableAutoConfiguration,其中最关键的就是@EnableAutoConfiguration注解,它会根据classpath中的jar依赖为项目进行自动配置。
+
+- @EnableAutoConfiguration注解
+
+该注解通过SpringFactoriesLoader会加载classpath下META-INF/spring.factories文件中配置的自动配置类。这些自动配置类可以帮助Spring Boot项目进行自动化设置。
+
+- 启动引导程序Bootstrap Application
+
+Spring Boot在启动时会通过一个引导程序进行项目初始化。该引导程序会先加载自动配置类和其它一些关键类,实现自动配置的预处理工作。
+
+- 条件注解@Conditional
+
+Spring Boot提供了各种条件注解如@ConditionalOnClass、@ConditionalOnMissingBean等,自动配置类可以通过这些注解来对配置进行定制化。只有满足条件的自动配置才会生效。
+
+
 
 参考：https://javaguide.cn/system-design/framework/spring/spring-boot-auto-assembly-principles.html#autoconfigurationimportselector-%E5%8A%A0%E8%BD%BD%E8%87%AA%E5%8A%A8%E8%A3%85%E9%85%8D%E7%B1%BB
 
@@ -50,64 +72,60 @@ description: Java框架
 
 ## 3.如何使用 Spring Boot 实现全局异常处理？
 
-- 使用 `@ControllerAdvice` 和 `@ExceptionHandler` 处理全局异常
-- `@ExceptionHandler` 处理 Controller级别的异常
+- 创建一个全局异常处理类,实现HandlerExceptionResolver接口。
+- @ControllerAdvice注解标注该类是一个全局异常处理类。
+- @ExceptionHandler注解用来定义该方法处理的异常类型。
+- 在处理方法中添加Exception类型的参数,可以获取异常对象信息。
+- 处理方法中根据异常类型进行相应处理,比如返回指定的错误信息。
+- 创建ResponseEntity对象封装返回的错误信息,设置状态码等信息。
+- 在Spring Boot主类中使用@Bean注解注册全局异常处理类。
+- 当 controller 抛出异常时,会被全局异常处理类自动捕获,并进行相应的处理,返回给用户统一的错误响应。
 
 例子：
 
-```java
-CustomException：
-
-public class CustomException extends RuntimeException {
-
-    private AppHttpCodeEnum appHttpCodeEnum;
-
-    public CustomException(AppHttpCodeEnum appHttpCodeEnum){
-        this.appHttpCodeEnum = appHttpCodeEnum;
-    }
-
-    public AppHttpCodeEnum getAppHttpCodeEnum() {
-        return appHttpCodeEnum;
-    }
-}
-
-```
+创建全局异常处理类:
 
 ```java
-@ControllerAdvice  //控制器增强类
-@Slf4j
-public class ExceptionCatch {
+@ControllerAdvice
+public class GlobalExceptionHandler implements HandlerExceptionResolver {
 
-    /**
-     * 处理不可控异常
-     * @param e
-     * @return
-     */
-    @ExceptionHandler(Exception.class)
+    @ExceptionHandler(Exception.class) 
     @ResponseBody
-    public ResponseResult exception(Exception e){
-        e.printStackTrace();
-        log.error("catch exception:{}",e.getMessage());
-
-        return ResponseResult.errorResult(AppHttpCodeEnum.SERVER_ERROR);
+    public ResponseEntity<String> handleException(Exception ex) {
+        return new ResponseEntity<String>("服务器内部错误", HttpStatus.INTERNAL_SERVER_ERROR); 
     }
 
-    /**
-     * 处理可控异常  自定义异常
-     * @param e
-     * @return
-     */
-    @ExceptionHandler(CustomException.class)
-    @ResponseBody
-    public ResponseResult exception(CustomException e){
-        log.error("catch exception:{}",e);
-        return ResponseResult.errorResult(e.getAppHttpCodeEnum());
+    @ExceptionHandler(BusinessException.class)
+    @ResponseBody 
+    public ResponseEntity<String> handleBusinessException(BusinessException ex) {
+        return new ResponseEntity<String>(ex.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
     }
 }
-
 ```
 
+在Spring Boot启动类中注册:
 
+```java
+@Bean
+public GlobalExceptionHandler getGlobalExceptionHandler() {
+    return new GlobalExceptionHandler();
+}
+```
+
+在Controller中抛出异常:
+
+```Java
+@RestController
+public class TestController {
+
+    @GetMapping("/test")
+    public String test() {
+        throw new BusinessException("业务异常");
+    }
+}
+```
+
+访问/test接口会进入全局异常处理,返回业务异常信息。
 
 ## 4.核心配置文件
 
@@ -115,11 +133,7 @@ SpringBoot的核心配置文件是**application**和**bootstrap**配置文件。
 
 application配置文件这个容易理解，主要用于Spring Boot项目的自动化配置。
 
-bootstrap配置文件有以下几个应用场景：
-
-- 使用Spring Cloud Config配置中心时，这时需要在bootstrap配置文件中添加连接到配置中心的配置属性来加载外部配置中心的配置信息；
-- 一些固定的不能被覆盖的属性；
-- 一些加密/解密的场景；
+bootstrap配置文件，该文件用于关联配置中心的配置,也可以配置一些初始化参数,会更早地加载。使用Spring Cloud Config配置中心时，这时需要在bootstrap配置文件中添加连接到配置中心的配置属性来加载外部配置中心的配置信息；
 
 
 
@@ -127,7 +141,7 @@ bootstrap配置文件有以下几个应用场景：
 
 这可以使用 DEV 工具来实现。通过这种依赖关系，您可以节省任何更改，嵌入式tomcat 将重新启动。Spring Boot  有一个开发工具（DevTools）模块，它有助于提高开发人员的生产力。Java  开发人员面临的一个主要挑战是将文件更改自动部署到服务器并自动重启服务器。开发人员可以重新加载 Spring Boot  上的更改，而无需重新启动服务器。这将消除每次手动部署更改的需要。Spring Boot  在发布它的第一个版本时没有这个功能。这是开发人员最需要的功能。DevTools 模块完全满足开发人员的需求。该模块将在生产环境中被禁用。它还提供 H2 数据库控制台以更好地测试应用程序。
 
-```
+```xml
 <dependency>
     <groupId>org.springframework.boot</groupId>
     <artifactId>spring-boot-devtools</artifactId>
@@ -189,7 +203,6 @@ Spring Boot CLI是一个命令行使用Spring Boot的客户端工具；主要功
 - 运行groovy脚本 => `官网2.1`
 - 打包groovy文件到jar => `官网2.3`
 - 初始化Spring Boot项目 => `官网2.4`
-- 其他
 
 actuator是Spring Boot的监控插件，本身提供了很多接口可以获取当前项目的各项运行状态指标。
 

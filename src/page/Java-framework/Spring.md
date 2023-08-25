@@ -13,7 +13,7 @@ AOP：AOP(Aspect-Oriented Programming:面向切面编程)能够将那些与业�
 
 Spring AOP 就是基于动态代理的，如果要代理的对象，实现了某个接口，那么 Spring AOP 会使用 **JDK Proxy**，去创建代理对象，而对于没有实现接口的对象，就无法使用 JDK Proxy 去进行代理了，这时候 Spring AOP 会使用 **Cglib** 生成一个被代理对象的子类来作为代理。
 
-IOC： 是一种设计思想，而不是一个具体的技术实现。IoC 的思想就是将原本在程序中手动创建对象的控制权，交由 Spring 框架来管理。不过， IoC 并非 Spring 特有，在其他语言中也有应用。
+IOC： 控制反转是一种设计思想，而不是一个具体的技术实现。IoC 的思想就是将原本在程序中手动创建对象的控制权，交由 Spring 框架来管理。不过， IoC 并非 Spring 特有，在其他语言中也有应用。
 
 **为什么叫控制反转？**
 
@@ -26,9 +26,9 @@ IOC容器的整体功能：
 
 ## 2.Bean的生命周期
 
-Spring 容器可以管理 singleton 作用域 Bean 的生命周期，在此作用域下，Spring 能够精确地知道该 Bean 何时被创建，何时初始化完成，以及何时被销毁。
+Spring 容器可以管理 **singleton** 作用域 Bean 的生命周期，在此作用域下，Spring 能够精确地知道该 Bean 何时被创建，何时初始化完成，以及何时被销毁。
 
-而对于 prototype 作用域的 Bean，Spring 只负责创建，当容器创建了 Bean 的实例后，Bean 的实例就交给客户端代码管理，Spring 容器将不再跟踪其生命周期。每次客户端请求 prototype 作用域的 Bean 时，Spring 容器都会创建一个新的实例，并且不会管那些被配置成 prototype 作用域的 Bean 的生命周期。
+而对于 **prototype** 作用域的 Bean，Spring 只负责创建，当容器创建了 Bean 的实例后，Bean 的实例就交给客户端代码管理，Spring 容器将不再跟踪其生命周期。每次客户端请求 prototype 作用域的 Bean 时，Spring 容器都会创建一个新的实例，并且不会管那些被配置成 prototype 作用域的 Bean 的生命周期。
 
 了解 Spring 生命周期的意义就在于，**可以利用 Bean 在其存活期间的指定时刻完成一些相关操作**。这种时刻可能有很多，但一般情况下，会在 Bean 被初始化后和被销毁前执行一些相关操作。
 
@@ -36,15 +36,15 @@ Spring 容器可以管理 singleton 作用域 Bean 的生命周期，在此作�
 
 ![](http://www.img.youngxy.top/Java/fig/bean.png)
 
-- 如果 BeanFactoryPostProcessor 和 Bean 关联, 则调用postProcessBeanFactory方法.(即首**先尝试从Bean工厂中获取Bean**)
+- 如果 BeanFactoryPostProcessor 和 Bean 关联, 则调用postProcessBeanFactory方法。(即首**先尝试从Bean工厂中获取Bean**)
 
-- 如果 InstantiationAwareBeanPostProcessor 和 Bean 关联，则调用postProcessBeforeInstantiation方法
+- 如果 InstantiationAwareBeanPostProcessor 和 Bean 关联，则调用postProcessBeforeInstantiation方法。
 
 - 根据配置情况调用 Bean 构造方法**实例化 Bean**。
 
 - 利用依赖注入完成 Bean 中所有**属性值的配置注入**。
 
-- 如果 InstantiationAwareBeanPostProcessor 和 Bean 关联，则调用postProcessAfterInstantiation方法和postProcessProperties
+- 如果 InstantiationAwareBeanPostProcessor 和 Bean 关联，则调用postProcessAfterInstantiation方法和postProcessProperties。
 
 - **调用xxxAware接口** (上图只是给了几个例子) 
 
@@ -64,12 +64,12 @@ Spring 容器可以管理 singleton 作用域 Bean 的生命周期，在此作�
 
   （3）如果 Bean 实现了 ApplicationContextAware 接口，则 Spring 调用 setApplicationContext() 方法传入当前 ApplicationContext 实例的引用。
 
-- 如果 BeanPostProcessor 和 Bean 关联，则 Spring 将调用该接口的预初始化方法 postProcessBeforeInitialzation() 对 Bean 进行加工操作，此处非常重要，Spring 的 AOP 就是利用它实现的。
-- 如果 Bean 实现了 InitializingBean 接口，则 Spring 将调用 afterPropertiesSet() 方法。(或者有执行@PostConstruct注解的方法)
+- 如果 BeanPostProcessor 和 Bean 关联，则 Spring 将调用该接口的预初始化方法 。**postProcessBeforeInitialzation() 对 Bean 进行加工操作，此处非常重要，Spring 的 AOP 就是利用它实现的。**
+- 如果 Bean 实现了 InitializingBean 接口，则 Spring 将调用 afterPropertiesSet() 方法。(或者有执行@PostConstruct注解的方法)。
 - 如果在配置文件中通过 **init-method** 属性指定了初始化方法，则调用该初始化方法。
 - 如果 BeanPostProcessor 和 Bean 关联，则 Spring 将调用该接口的初始化方法 postProcessAfterInitialization()。此时，Bean 已经可以被应用系统使用了。
 - 如果在 `<bean>` 中指定了该 Bean 的作用范围为 scope="singleton"，则将该 Bean 放入 Spring IoC 的缓存池中，将触发 Spring 对该 Bean 的生命周期管理；如果在 `<bean>` 中指定了该 Bean 的作用范围为 scope="prototype"，则将该 Bean 交给调用者，调用者管理该 Bean 的生命周期，Spring 不再管理该 Bean。
-- 如果 Bean 实现了 DisposableBean 接口，则 Spring 会调用 destory() 方法将 Spring 中的 Bean 销毁；(或者有执行@PreDestroy注解的方法)
+- 如果 Bean 实现了 DisposableBean 接口，则 Spring 会调用 destory() 方法将 Spring 中的 Bean 销毁；(或者有执行@PreDestroy注解的方法)。
 - 如果在配置文件中通过 **destory-method** 属性指定了 Bean 的销毁方法，则 Spring 将调用该方法对 Bean 进行销毁。
 
 
@@ -86,7 +86,7 @@ Spring 容器可以管理 singleton 作用域 Bean 的生命周期，在此作�
 
 上图用于辅助理解，面试时可用下列 8 步描述 SpringMVC 运行流程：
 
-1. 用户向服务器发送请求，请求被 Spring 前端控制Servelt DispatcherServlet 捕获；
+1. 用户向服务器发送请求，请求被 Spring 前端DispatcherServlet 捕获；
 2. DispatcherServlet 对请求 URL 进行解析，得到请求资源标识符（URI）。然后根据该 URI，调用  HandlerMapping 获得该 Handler 配置的所有相关的对象（包括 Handler 对象以及 Handler  对象对应的拦截器），最后以 HandlerExecutionChain 对象的形式返回；
 3. DispatcherServlet 根据获得的 Handler，选择一个合适的HandlerAdapter；（附注：如果成功获得 HandlerAdapter 后，此时将开始执行拦截器的 preHandler(…)方法）
 4. 提取 Request 中的模型数据，填充 Handler 入参，开始执行Handler（Controller)。在填充 Handler 的入参过程中，根据你的配置，Spring 将帮你做一些额外的工作：
@@ -193,7 +193,7 @@ TransactionDefinition.PROPAGATION_NESTED：如果当前存在事务，则创建�
 
 了解问题的本质再分析问题，往往更利于对问题有更深入的了解和研究。**所以我们在分析 Spring 关于循环依赖的源码之前，先要了解下什么是循环依赖。**
 
-**1. 循环依赖的概念**
+### 6.1循环依赖的概念
 
 ![img](https://image.iamshuaidi.com/picture/v2-dcc3be57d2f88cc011165231c40122d8_720w.jpg)
 
@@ -203,9 +203,9 @@ TransactionDefinition.PROPAGATION_NESTED：如果当前存在事务，则创建�
 - 但无论循环依赖的数量有多少，循环依赖的本质是一样的。就是你的完整创建依赖于我，而我的完整创建也依赖于你，但我们互相没法解耦，最终导致依赖创建失败。
 - 所以 Spring 提供了除了构造函数注入和原型注入外的，setter循环依赖注入解决方案。那么我们也可以先来尝试下这样的依赖，如果是我们自己处理的话该怎么解决。
 
-**2. 问题体现**
+### 6.2问题体现
 
-```
+```java
 public class ABTest {
     public static void main(String[] args) {
         new ClazzA();
@@ -223,11 +223,25 @@ class ClazzB {
 
 ```
 
-**3.解决方案**
+### 6.3解决方案
 
 整个解决循环依赖的核心内容，A 创建后填充属性时依赖 B，那么就去创建 B，在创建 B 开始填充时发现依赖于 A，但此时 A 这个半成品对象已经存放在缓存到`singletonObjects` 中了，所以 B 可以正常创建，在通过递归把 A 也创建完整了。
 
-**4.Spring解决**
+### 6.4Spring解决
+
+#### 6.4.1setter注入的方式
+
+- Spring默认是通过setter注入的方式来注入bean的依赖属性的。
+- 在实例化一个bean时,Spring会先创建这个bean的实例,然后再通过set方法为其设置属性。
+- 如果此时有循环依赖,例如A依赖B,B依赖A。Spring会先完成A和B两个bean的实例化,使其处于“半初始化”状态。
+- 然后Spring会调用A的set方法设置其依赖的B的属性,此时B已实例化,可以被注入。
+- 同样地,Spring又会调用B的set方法设置其依赖的A的属性,此时A也已实例化,可以被注入。
+- 通过这种“提前实例化,推迟设置属性”的方式,Spring使得两个有循环依赖的bean都先实例化,然后再相互设置对方的属性,这样就巧妙地避免了循环依赖的问题。
+- 所以Spring的setter注入方式可以很好的解决循环依赖,这也是Spring默认选择的注入方式。
+
+所以,简单来说,Spring通过先实例化,再通过set方法设置属性的setter注入方式,实现了在实例化阶段就将bean初始化,而将属性填充推迟到后面,这样就可以顺利解决循环依赖的问题。这是Spring容器很关键的一个设计。
+
+#### 6.4.2三级缓存的方式
 
 （1）一级缓存能解决吗？
 
@@ -263,7 +277,7 @@ class ClazzB {
 
 其实整体处理过程类似，唯独是 B 在填充属性 A 时，先查询成品缓存、再查半成品缓存，最后在看看有没有单例工程类在三级缓存中。最终获取到以后调用 getObject 方法返回代理引用或者原始引用。
 
-至此也就解决了 Spring AOP 所带来的三级缓存问题。*本章节涉及到的 AOP 依赖有源码例子，可以进行调试*
+至此也就解决了 Spring AOP 所带来的三级缓存问题。*本章节涉及到的 AOP 依赖有源码例子，可以进行调试*。
 
 （4）总结
 

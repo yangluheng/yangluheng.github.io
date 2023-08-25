@@ -36,10 +36,10 @@ public class UserDaoImpl implements UserDao {
 
 总结一下,MyBatis Dao接口实现原理主要包括:
 
-1. Dao接口仅定义抽象数据访问方法,不包含实现逻辑
-2. MyBatis利用JDK动态代理,为每个Dao接口生成代理对象
-3. 代理对象内部包含SqlSession引用,实际执行SqlSession的数据库访问方法
-4. 这样做的好处是 hiding-entirely separating DAO implementation and data access logic
+- Dao接口仅定义抽象数据访问方法,不包含实现逻辑
+- MyBatis利用JDK动态代理,为每个Dao接口生成代理对象
+- 代理对象内部包含SqlSession引用,实际执行SqlSession的数据库访问方法
+- 这样做的好处是 hiding-entirely separating DAO implementation and data access logic
 
 ## 2.MyBatis分页原理 
 
@@ -102,13 +102,12 @@ MyBatis 使用 JDK 的动态代理，为需要拦截的接口生成代理对象�
 
 ### 3.1一级缓存：
 
-作用域是同一个 SqlSession，在同一个 sqlSession 中两次执行相同的 sql 语句，
-第一次执行完毕会将数据库中查询的数据写到缓存（内存），第二次会从缓存中获取,从而提高查询效率。当一个 sqlSession 结束后该 sqlSession 中的 一级缓存也就不存在了。**Mybatis 默认开启一级缓存。**
-一级缓存内部存储使用一个 HashMap，key 为 hashCode+sqlId+Sql 语句。value 为 从查询出来映射生成的 java 对象 sqlSession 执行 insert、update、delete 等操作 commit 提交后会清空缓存区域。
+作用域是同一个 SqlSession，在同一个sqlSession中两次执行相同的sql语句，第一次执行完毕会将数据库中查询的数据写到缓存（内存），第二次会从缓存中获取,从而提高查询效率。当一个sqlSession 结束后该 sqlSession中的一级缓存也就不存在了。**Mybatis 默认开启一级缓存。**
+一级缓存内部存储使用一个 HashMap，key 为 hashCode+sqlId+Sql 语句。value为从查询出来映射生成的 java 对象 。sqlSession执行insert、update、delete 等操作 commit 提交后会清空缓存区域。
 
 ### 3.2二级缓存：
 
-是多个 SqlSession 共享的，其作用域是 mapper 的同一个 namespace，不同 的 sqlSession 两次执行相同 namespace 下的 sql 语句且向 sql 中传递参数也相同即最终执行 相同的 sql 语句，第一次执行完毕会将数据库中查询的数据写到缓存（内存），第二次会从 缓存中获取数据将不再从数据库查询，从而提高查询效率。Mybatis 默认没有开启二级缓存 需要在 setting 全局参数中配置开启二级缓存。
+是多个 SqlSession 共享的，其作用域是 mapper 的同一个 namespace，不同的sqlSession 两次执行相同 namespace 下的 sql 语句且向 sql 中传递参数也相同即最终执行 相同的 sql 语句，第一次执行完毕会将数据库中查询的数据写到缓存（内存），第二次会从 缓存中获取数据将不再从数据库查询，从而提高查询效率。Mybatis 默认没有开启二级缓存 需要在 setting 全局参数中配置开启二级缓存。
 
 在yml中添加以下代码：
 
@@ -130,7 +129,7 @@ readOnly：是否只读 。 值为true时，mybatis认为所有从缓存中获�
 
 ### 3.3三级缓存：
 
-Mybatis 的一级缓存与二级缓存 只适用于单体项目，在分布式服务或者微服务架构下 都会出现数据不一致问题。所以Mybatis 为我们提供了自定义缓存 我们可以集成很多三方中间件来做缓存 这里就那Redis来说一下。
+Mybatis 的一级缓存与二级缓存只适用于单体项目，在分布式服务或者微服务架构下都会出现数据不一致问题。所以Mybatis为我们提供了自定义缓存。我们可以集成很多三方中间件来做缓存。这里就Redis来说一下。
 
 ![](http://www.img.youngxy.top/Java/fig/mybatis2.png)
 
