@@ -245,7 +245,7 @@ StickyAssignor算法比较复杂，下面举例来说明分配的效果（对比
 
 ![](http://www.img.youngxy.top/Java/fig/kafka%E6%B6%88%E6%81%AF2.png)
 
-#### 如何保证消息的消费顺序？
+### 4.3如何保证消息的消费顺序？
 
 **第一种方案:**
 拆分多个queue, 每一个queue一个consumer
@@ -285,8 +285,41 @@ try {
 
 同步发送模式 「sync」，调用 send() 方法会返回一个 Future 对象，再通过调用 Future 对象的 get() 方法，等待结果返回，根据返回的结果可以判断消息是否发送成功， 由于是同步发送会阻塞，只有当消息通过 get() 返回数据时，才会继续下一条消息的发送。
 
+```java
+Properties props = new Properties();
+props.put("bootstrap.servers", "broker1:9092,broker2:9092");
+
+Producer<String, String> producer = new KafkaProducer<>(props);
+
+ProducerRecord<String, String> record = 
+  new ProducerRecord<>("my-topic", "my-message");
+
+try {
+  RecordMetadata metadata = producer.send(record).get(); // 同步发送
+  // 收到消息响应后处理结果
+  System.out.println(metadata.topic()+":"+metadata.partition()+":"+metadata.offset()); 
+} catch (Exception e) {
+  // 处理发送失败 
+  System.out.println("Error sending message");
+}
+```
+
 **异步发送模式**
 
 异步发送模式「async」，在调用 send() 方法的时候指定一个 callback 函数，当 Broker 接收到返回的时候，该 callback 函数会被触发执行，通过回调函数能够对异常情况进行处理，当调用了回调函数时，只有回调函数执行完毕生产者才会结束，否则一直会阻塞。
+
+```Java
+producer.send(record, new Callback() {
+  public void onCompletion(RecordMetadata metadata, Exception exception) {
+    if(exception != null) {
+      // 消息发送失败处理
+    } else {
+      // 消息发送成功,在callback中处理
+    }
+  } 
+});
+
+// 发送端不需要等待callback返回
+```
 
 参考：https://ost.51cto.com/posts/11148

@@ -36,15 +36,15 @@ Spring 容器可以管理 **singleton** 作用域 Bean 的生命周期，在此�
 
 ![](http://www.img.youngxy.top/Java/fig/bean.png)
 
-- 如果 BeanFactoryPostProcessor 和 Bean 关联, 则调用postProcessBeanFactory方法。(即首**先尝试从Bean工厂中获取Bean**)
+- 如果 BeanFactoryPostProcessor和Bean关联, 则调用postProcessBeanFactory方法。(即首**先尝试从Bean工厂中获取Bean**)
 
-- 如果 InstantiationAwareBeanPostProcessor 和 Bean 关联，则调用postProcessBeforeInstantiation方法。
+- 如果 InstantiationAwareBeanPostProcessor和Bean关联，则调用postProcessBeforeInstantiation方法。
 
 - 根据配置情况调用 Bean 构造方法**实例化 Bean**。
 
 - 利用依赖注入完成 Bean 中所有**属性值的配置注入**。
 
-- 如果 InstantiationAwareBeanPostProcessor 和 Bean 关联，则调用postProcessAfterInstantiation方法和postProcessProperties。
+- 如果 InstantiationAwareBeanPostProcessor和Bean关联，则调用postProcessAfterInstantiation方法和postProcessProperties。
 
 - **调用xxxAware接口** (上图只是给了几个例子) 
 
@@ -71,6 +71,12 @@ Spring 容器可以管理 **singleton** 作用域 Bean 的生命周期，在此�
 - 如果在 `<bean>` 中指定了该 Bean 的作用范围为 scope="singleton"，则将该 Bean 放入 Spring IoC 的缓存池中，将触发 Spring 对该 Bean 的生命周期管理；如果在 `<bean>` 中指定了该 Bean 的作用范围为 scope="prototype"，则将该 Bean 交给调用者，调用者管理该 Bean 的生命周期，Spring 不再管理该 Bean。
 - 如果 Bean 实现了 DisposableBean 接口，则 Spring 会调用 destory() 方法将 Spring 中的 Bean 销毁；(或者有执行@PreDestroy注解的方法)。
 - 如果在配置文件中通过 **destory-method** 属性指定了 Bean 的销毁方法，则 Spring 将调用该方法对 Bean 进行销毁。
+
+**简化版：**
+
+![](http://www.img.youngxy.top/Java/fig/bean%E7%9A%84%E7%94%9F%E5%91%BD%E5%91%A8%E6%9C%9F.webp)
+
+参考：https://zhuanlan.zhihu.com/p/562198754
 
 
 

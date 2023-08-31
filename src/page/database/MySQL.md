@@ -127,8 +127,6 @@ B 树也称 B-树,全称为 **多路平衡查找树** ，B+ 树是 B 树的一�
 
 在 MySQL 的 InnoDB 的表中，当没有显示的指定表的主键时，InnoDB 会自动先检查表中是否有唯一索引且不允许存在 null 值的字段，如果有，则选择该字段为默认的主键，否则 InnoDB 将会自动创建一个 6Byte 的自增主键。
 
-![img](https://oss.javaguide.cn/github/javaguide/open-source-project/cluster-index.png)
-
 
 
 ### 2.4二级索引：
@@ -142,7 +140,7 @@ B 树也称 B-树,全称为 **多路平衡查找树** ，B+ 树是 B 树的一�
 3. **前缀索引(Prefix)** ：前缀索引只适用于字符串类型的数据。前缀索引是对文本的前几个字符创建索引，相比普通索引建立的数据更小， 因为只取前几个字符。
 4. **全文索引(Full Text)** ：全文索引主要是为了检索大文本数据中的关键字的信息，是目前搜索引擎数据库使用的一种技术。Mysql5.6 之前只有 MYISAM 引擎支持全文索引，5.6 之后 InnoDB 也支持了全文索引。
 
-![img](https://oss.javaguide.cn/github/javaguide/open-source-project/no-cluster-index.png)
+
 
 ### 2.5聚簇索引：
 
