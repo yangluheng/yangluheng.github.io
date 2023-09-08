@@ -77,3 +77,150 @@ ConcurrentHashMap和HashMap的实现方式不一样，虽然都是使用桶数�
 ConcurrentHashMap在每一个分段上都用锁进行了保护。HashMap没有锁机制。所以，前者线程安全的，后者不是线程安全的。
 
 **注意**：以上区别基于jdk1.8以前的版本。
+
+
+
+## 9.HashMap 的 7 种遍历方式与性能分析
+
+HashMap 遍历从大的方向来说，可分为以下 4 类：
+
+1. 迭代器（Iterator）方式遍历；
+2. For Each 方式遍历；
+3. Lambda 表达式遍历（JDK 1.8+）;
+4. Streams API 遍历（JDK 1.8+）。
+
+但每种类型下又有不同的实现方式，因此具体的遍历方式又可以分为以下 7 种：
+
+1. 使用迭代器（Iterator）EntrySet 的方式进行遍历；
+2. 使用迭代器（Iterator）KeySet 的方式进行遍历；
+3. 使用 For Each EntrySet 的方式进行遍历；
+4. 使用 For Each KeySet 的方式进行遍历；
+5. 使用 Lambda 表达式的方式进行遍历；
+6. 使用 Streams API 单线程的方式进行遍历；
+7. 使用 Streams API 多线程的方式进行遍历。
+
+### 9.1遍历方式
+
+```java
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.Map;
+
+/**
+ * HashMap的遍历方式
+ */
+public class Main {
+    public static void main(String[] args) {
+        HashMap<Integer, String> hashMap = new HashMap<>();
+        hashMap.put(1, "去");
+        hashMap.put(2, "有");
+        hashMap.put(3, "风");
+        hashMap.put(4, "的");
+        hashMap.put(5, "地");
+        hashMap.put(6, "方");
+
+        entrySet(hashMap);
+        keySet(hashMap);
+        for_entrySet(hashMap);
+        for_key(hashMap);
+        lambda(hashMap);
+        stream_danxiancheng(hashMap);
+        stream_duoxiancheng(hashMap);
+    }
+
+    private static void stream_duoxiancheng(HashMap<Integer, String> hashMap) {
+        //7.stream多线程
+        hashMap.entrySet().parallelStream().forEach((entry) -> {
+            System.out.println(entry.getKey());
+            System.out.println(entry.getValue());
+        });
+    }
+
+    private static void stream_danxiancheng(HashMap<Integer, String> hashMap) {
+        //6.stream单线程
+        hashMap.entrySet().stream().forEach((entry) -> {
+            System.out.println(entry.getKey());
+            System.out.println(entry.getValue());
+        });
+    }
+
+    private static void lambda(HashMap<Integer, String> hashMap) {
+        //5.lambda
+        hashMap.forEach((key, value) -> {
+            System.out.println(key);
+            System.out.println(value);
+        });
+    }
+
+    private static void for_key(HashMap<Integer, String> hashMap) {
+        //4.forkeySet
+        for (Integer key : hashMap.keySet()) {
+            System.out.println(key);
+            System.out.println(hashMap.get(key));
+        }
+    }
+
+    private static void for_entrySet(HashMap<Integer, String> hashMap) {
+        //3.forentrySet
+        for (Map.Entry<Integer, String> entry : hashMap.entrySet()) {
+            System.out.println(entry.getKey());
+            System.out.println(entry.getValue());
+        }
+    }
+
+    private static void keySet(HashMap<Integer, String> hashMap) {
+        //2.迭代器keySet
+        Iterator<Integer> iterator = hashMap.keySet().iterator();
+        while (iterator.hasNext()){
+            Integer key = iterator.next();
+            System.out.println(key);
+            System.out.println(hashMap.get(key));
+        }
+    }
+
+    private static void entrySet(HashMap<Integer, String> hashMap) {
+        //1.迭代器entrySet
+        Iterator<Map.Entry<Integer, String>> iterator = hashMap.entrySet().iterator();
+        while (iterator.hasNext()){
+            Map.Entry<Integer, String> entry = iterator.next();
+            System.out.println(entry.getKey());
+            System.out.println(entry.getValue());
+        }
+    }
+}
+
+```
+
+### 9.2性能分析
+
+`EntrySet` 之所以比 `KeySet` 的性能高是因为，`KeySet` 在循环时使用了 `map.get(key)`，而 `map.get(key)` 相当于又遍历了一遍 Map 集合去查询 `key` 所对应的值。为什么要用“又”这个词？那是因为**在使用迭代器或者 for 循环时，其实已经遍历了一遍 Map 集合了，因此再使用 `map.get(key)` 查询时，相当于遍历了两遍**。
+
+而 `EntrySet` 只遍历了一遍 Map 集合，之后通过代码“Entry<Integer, String> entry = iterator.next()”把对象的 `key` 和 `value` 值都放入到了 `Entry` 对象中，因此再获取 `key` 和 `value` 值时就无需再遍历 Map 集合，只需要从 `Entry` 对象中取值就可以了。
+
+所以，**`EntrySet` 的性能比 `KeySet` 的性能高出了一倍，因为 `KeySet` 相当于循环了两遍 Map 集合，而 `EntrySet` 只循环了一遍**。
+
+这篇文章对于 parallelStream 遍历方式的性能分析有误，先说结论：**存在阻塞时 parallelStream 性能最高, 非阻塞时 parallelStream 性能最低** 。
+
+当遍历不存在阻塞时, parallelStream 的性能是最低的：
+
+```
+Benchmark               Mode  Cnt     Score      Error  Units
+Test.entrySet           avgt    5   288.651 ±   10.536  ns/op
+Test.keySet             avgt    5   584.594 ±   21.431  ns/op
+Test.lambda             avgt    5   221.791 ±   10.198  ns/op
+Test.parallelStream     avgt    5  6919.163 ± 1116.139  ns/op
+```
+
+加入阻塞代码`Thread.sleep(10)`后, parallelStream 的性能才是最高的:
+
+```
+Benchmark               Mode  Cnt           Score          Error  Units
+Test.entrySet           avgt    5  1554828440.000 ± 23657748.653  ns/op
+Test.keySet             avgt    5  1550612500.000 ±  6474562.858  ns/op
+Test.lambda             avgt    5  1551065180.000 ± 19164407.426  ns/op
+Test.parallelStream     avgt    5   186345456.667 ±  3210435.590  ns/op
+```
+
+
+
+参考：https://mp.weixin.qq.com/s/zQBN3UvJDhRTKP6SzcZFKw
