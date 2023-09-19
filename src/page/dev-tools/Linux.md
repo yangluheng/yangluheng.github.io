@@ -350,3 +350,126 @@ inode 中记录了文件内容所在的 block 编号，但是每个 block 非常
 
 9 位的文件权限字段中，每 3 个为一组，共 3 组，每一组分别代表对文件拥有者、所属群组以及其它人的文件权限。一组权限中的 3 位分别为 r、w、x 权限，表示可读、可写、可执行。
 
+
+
+## 6.排查CPU占用过高
+
+如果我们项目在linux上部署成功并正常运行，但是发现linux的cpu飙升。这时就需要对cpu飙升问题进行排查。以下是排查方法。
+
+- Java 进程cpu飙升问题
+- Mysql 进程cup飙升
+
+### 6.1Java 进程cpu飙升问题
+
+#### 6.1.1使用 top 命令
+
+示例：pandas 是基于NumPy 的一种工具，该工具是为了解决数据分析任务而创建的。
+ top命令可以动态地持续监听进程运行情况，默认情况下是按照cpu的使用率倒叙排序。所以我们直接看排在最前面的java进程就可以。
+
+```shell
+top
+```
+
+通过结果可以看出第一行的java进程cpu使用率最高，占比75.5%.这样我们就可以得到cpu占比高的进程ID。PID=13369.
+ 我们也可以通过grep筛选java进程。
+
+#### 6.1.2使用ps命令查看cpu占比高的PID
+
+我们通过ps命令查看该进程对应的哪个线程占用cpu资源比较高。
+
+```shell
+ps -mp 13369 -o THREAD,tid,time
+```
+
+#### 6.1.3将对应的TID转换为16进制
+
+我们分析java线程会使用到jdk自带的jstack工具，该工具需要16进制的线程ID进行筛选，所以我们需要把需要分析的线程ID转换为16进制。
+
+```shell
+printf "%x\n" 13370
+343a
+```
+
+#### 6.1.4使用jdk自带的命令jstack，拉出指定线程的堆栈信息
+
+```shell
+jstack 13369 |grep 343a -A150
+
+
+"main" #1 prio=5 os_prio=0 tid=0x00007f5dc0009800 nid=0x343a runnable [0x00007f5dc8457000]
+   java.lang.Thread.State: RUNNABLE
+	at java.io.FileOutputStream.writeBytes(Native Method)
+	at java.io.FileOutputStream.write(FileOutputStream.java:326)
+	at java.io.BufferedOutputStream.flushBuffer(BufferedOutputStream.java:82)
+	at java.io.BufferedOutputStream.flush(BufferedOutputStream.java:140)
+	- locked <0x00000006c7c27f50> (a java.io.BufferedOutputStream)
+	at java.io.PrintStream.write(PrintStream.java:482)
+	- locked <0x00000006c7c0c380> (a java.io.PrintStream)
+	at sun.nio.cs.StreamEncoder.writeBytes(StreamEncoder.java:221)
+	at sun.nio.cs.StreamEncoder.implFlushBuffer(StreamEncoder.java:291)
+	at sun.nio.cs.StreamEncoder.flushBuffer(StreamEncoder.java:104)
+	- locked <0x00000006c7c0b060> (a java.io.OutputStreamWriter)
+	at java.io.OutputStreamWriter.flushBuffer(OutputStreamWriter.java:185)
+	at java.io.PrintStream.newLine(PrintStream.java:546)
+	- locked <0x00000006c7c0c380> (a java.io.PrintStream)
+	at java.io.PrintStream.println(PrintStream.java:737)
+	- locked <0x00000006c7c0c380> (a java.io.PrintStream)
+	at WileDemo.main(WileDemo.java:8)
+
+"VM Thread" os_prio=0 tid=0x00007f5dc0081000 nid=0x3443 runnable 
+
+"GC task thread#0 (ParallelGC)" os_prio=0 tid=0x00007f5dc001e800 nid=0x343b runnable 
+
+"GC task thread#1 (ParallelGC)" os_prio=0 tid=0x00007f5dc0020800 nid=0x343c runnable 
+
+"GC task thread#2 (ParallelGC)" os_prio=0 tid=0x00007f5dc0022800 nid=0x343d runnable 
+
+"GC task thread#3 (ParallelGC)" os_prio=0 tid=0x00007f5dc0024000 nid=0x343e runnable 
+
+"GC task thread#4 (ParallelGC)" os_prio=0 tid=0x00007f5dc0026000 nid=0x343f runnable 
+
+"GC task thread#5 (ParallelGC)" os_prio=0 tid=0x00007f5dc0028000 nid=0x3440 runnable 
+
+"GC task thread#6 (ParallelGC)" os_prio=0 tid=0x00007f5dc0029800 nid=0x3441 runnable 
+
+"GC task thread#7 (ParallelGC)" os_prio=0 tid=0x00007f5dc002b800 nid=0x3442 runnable 
+
+"VM Periodic Task Thread" os_prio=0 tid=0x00007f5dc00d1000 nid=0x344c waiting on condition 
+
+JNI global references: 202
+
+```
+
+
+该命令中 13369 代表着进程ID，343a代表着线程ID的16进制，-A150代表着列出最多150行堆栈信息。
+
+#### 6.1.5对显示的堆栈信息进行分析
+
+这一步是最难的一步，也是对研发人员要求最高的一部，需要研发人员有大量的经验。
+
+每一个项目出现cpu占比过高的原因都不尽相同，在这里总结了常见的cpu飙升的原因
+
+- while死循环，或者循环次数超大的循环。
+- 超大的运算，如超大的浮点运算。
+- 频繁的Young GC。如大量的json数据转实体对象。
+- 多线程连接池，线程频繁地切换。我们使用top命令时可以看到CPU(s)一行，如果us用户空间占比过高，则说明是程序线程计算高引起的，通过堆栈分析可以找到原因；如果sy内核空间占比过高，那么一般是由于线程上下文切换引起的。
+
+
+
+### 6.2Mysql 执行过程
+
+#### 6.2.1使用 top 命令
+
+如 Java 执行过程一样，先使用 top 命令查看占比高的进程是不是 mysqld，如果是 mysqld 则表示 mysql 问题。
+
+
+
+#### 6.2.2使用 SHOW PROCESSLIST 语句
+
+当 Mysql 的 CPU 使用率 过高的时候，不要盲目开启慢日志，开启慢日志可能会让 Mysql 推向崩溃。
+一般是使用 SHOW PROCESSLIST 语句，定位大量存在的相同的 SQL 语句。对这些 SQL 语句进行针对性的分析。可能引起问题的原因通常是索引、锁、查询大量字段、大表等。
+
+```sql
+SHOW PROCESSLIST;
+```
+
