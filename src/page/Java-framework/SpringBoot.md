@@ -207,3 +207,83 @@ Spring Boot CLI是一个命令行使用Spring Boot的客户端工具；主要功
 actuator是Spring Boot的监控插件，本身提供了很多接口可以获取当前项目的各项运行状态指标。
 
 参考：https://mp.weixin.qq.com/s?__biz=Mzg2OTA0Njk0OA==&mid=2247485568&idx=2&sn=c5ba880fd0c5d82e39531fa42cb036ac&chksm=cea2474bf9d5ce5dcbc6a5f6580198fdce4bc92ef577579183a729cb5d1430e4994720d59b34&token=1729829670&lang=zh_CN#rd
+
+
+
+
+
+## 9.常用注解
+
+![在这里插入图片描述](https://img-blog.csdnimg.cn/76949b4057c24347a953700b376be3be.png)
+
+
+
+#### @Async 注解
+
+对于异步方法调用，从Spring3开始提供了@Async注解，该注解可以被标注在方法上，以便异步地调用该方法。调用者将在调用时立即返回，方法的实际执行将提交给Spring TaskExecutor的任务中，由指定的线程池中的线程执行。
+
+**同步**：同步就是整个处理过程顺序执行，当各个过程都执行完毕，并返回结果。
+
+**异步**：异步调用则是只是发送了调用的指令，调用者无需等待被调用的方法完全执行完毕；而是继续执行下面的流程。例如， 在某个调用中，需要顺序调用 A, B, C三个过程方法；如他们都是同步调用，则需要将他们都顺序执行完毕之后，方算作过程执行完毕；如B为一个异步的调用方法，则在执行完A之后，调用B，并不等待B完成，而是执行开始调用C，待C执行完毕之后，就意味着这个过程执行完毕了。在Java中，一般在处理类似的场景之时，都是基于创建独立的线程去完成相应的异步调用逻辑，通过主线程和不同的业务子线程之间的执行流程，从而在启动独立的线程之后，主线程继续执行而不会产生停滞等待的情况。
+
+**异步的方法有：**
+
+1、 最简单的异步调用，返回值为void
+ 2、 带参数的异步调用，异步方法可以传入参数
+ 3、 存在返回值，常调用返回Future
+
+##### @Async应用默认线程池
+
+Spring应用默认的线程池，指在@Async注解在使用时，不指定线程池的名称。查看源码，@Async的默认线程池为**SimpleAsyncTaskExecutor**。
+
+##### @Async应用自定义线程池
+
+自定义线程池，可对系统中线程池更加细粒度的控制，方便调整线程池大小配置，线程执行异常控制和处理。
+
+```java
+@Configuration
+@EnableAsync
+public class ThreadPoolConfig {
+
+    @Bean("taskExecutor")
+    public ThreadPoolTaskExecutor taskExecutor() {
+        ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
+        // 设置核心线程数
+        executor.setCorePoolSize(10);
+        // 设置最大线程数
+        executor.setMaxPoolSize(20);
+        // 设置队列容量
+        executor.setQueueCapacity(100);
+        // 设置线程名前缀
+        executor.setThreadNamePrefix("CrawlTaskExecutor-");
+        executor.initialize();
+        return executor;
+    }
+}
+
+@Component
+@Slf4j
+public class CrawlTaskConsumer {
+    @Autowired
+    private ThreadPoolCrawler threadPoolCrawler;
+
+    @Async("taskExecutor")
+    @KafkaListener(topics = KAFKA_CONSTANTS.KAKFA_CONSTANTS_TOPIC, groupId = KAFKA_CONSTANTS.KAKFA_CONSTANTS_GROUP)
+    public CompletableFuture<CrawlTask> consumeCrawlTask(ConsumerRecord<String, String> record, Consumer consumer) {
+        CrawlTask crawlTask = JSON.parseObject(record.value(), CrawlTask.class);
+        System.out.println("Received crawl task: " + crawlTask.toString());
+        threadPoolCrawler.crawl(crawlTask);
+        //手动提交偏移量
+        consumer.commitAsync();
+        return CompletableFuture.completedFuture(crawlTask);
+    }
+}
+```
+
+
+
+
+
+
+
+参考：https://blog.csdn.net/yuechuzhixing/article/details/124775218
