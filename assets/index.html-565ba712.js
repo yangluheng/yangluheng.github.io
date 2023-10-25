@@ -1,0 +1,1 @@
+import{_ as t}from"./plugin-vue_export-helper-c27b6911.js";import{o,c as n,a as e}from"./app-de16134f.js";const c={},s=e("p",null,[e("strong",null,"花有重开日，人无再少年")],-1),_=[s];function r(l,a){return o(),n("div",null,_)}const f=t(c,[["render",r],["__file","index.html.vue"]]);export{f as default};
