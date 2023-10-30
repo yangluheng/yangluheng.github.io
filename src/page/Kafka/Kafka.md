@@ -409,3 +409,281 @@ producer.send(record, new Callback() {
 ```
 
 参考：https://ost.51cto.com/posts/11148
+
+
+
+## 6.kafka高可用设计
+
+### 6.1集群
+
+![image-20210530223101568](/Users/yangluheng/Documents/项目/资料/day06-kafka及异步通知文章上下架/kafka及异步通知文章上下架.assets/image-20210530223101568.png)
+
+- Kafka 的服务器端由被称为 Broker 的服务进程构成，即一个 Kafka 集群由多个 Broker 组成
+
+- 这样如果集群中某一台机器宕机，其他机器上的 Broker 也依然能够对外提供服务。这其实就是 Kafka 提供高可用的手段之一
+
+### 6.2备份机制(Replication）
+
+![image-20210530223218580](/Users/yangluheng/Documents/项目/资料/day06-kafka及异步通知文章上下架/kafka及异步通知文章上下架.assets\image-20210530223218580.png)
+
+Kafka 中消息的备份又叫做 副本（Replica）
+
+Kafka 定义了两类副本：
+
+- 领导者副本（Leader Replica）
+
+- 追随者副本（Follower Replica）
+
+**同步方式**
+
+![image-20210530223316815](/Users/yangluheng/Documents/项目/资料/day06-kafka及异步通知文章上下架/kafka及异步通知文章上下架.assets\image-20210530223316815.png)
+
+ISR（in-sync replica）需要同步复制保存的follower
+
+
+
+如果leader失效后，需要选出新的leader，选举的原则如下：
+
+第一：选举时优先从ISR中选定，因为这个列表中follower的数据是与leader同步的
+
+第二：如果ISR列表中的follower都不行了，就只能从其他follower中选取
+
+
+
+极端情况，就是所有副本都失效了，这时有两种方案
+
+第一：等待ISR中的一个活过来，选为Leader，数据可靠，但活过来的时间不确定
+
+第二：选择第一个活过来的Replication，不一定是ISR中的，选为leader，以最快速度恢复可用性，但数据不一定完整
+
+## 7.kafka生产者详解 
+
+### 7.1发送类型
+
+- 同步发送
+
+  使用send()方法发送，它会返回一个Future对象，调用get()方法进行等待，就可以知道消息是否发送成功
+
+```java
+RecordMetadata recordMetadata = producer.send(kvProducerRecord).get();
+System.out.println(recordMetadata.offset());
+```
+
+- 异步发送
+
+  调用send()方法，并指定一个回调函数，服务器在返回响应时调用函数
+
+```java
+//异步消息发送
+producer.send(kvProducerRecord, new Callback() {
+    @Override
+    public void onCompletion(RecordMetadata recordMetadata, Exception e) {
+        if(e != null){
+            System.out.println("记录异常信息到日志表中");
+        }
+        System.out.println(recordMetadata.offset());
+    }
+});
+```
+
+### 7.2参数详解
+
+- ack
+
+![image-20210530224302935](/Users/yangluheng/Documents/项目/资料/day06-kafka及异步通知文章上下架/kafka及异步通知文章上下架.assets\image-20210530224302935.png)
+
+代码的配置方式：
+
+```java
+//ack配置  消息确认机制
+prop.put(ProducerConfig.ACKS_CONFIG,"all");
+```
+
+参数的选择说明
+
+| **确认机制**     | **说明**                                                     |
+| ---------------- | ------------------------------------------------------------ |
+| acks=0           | 生产者在成功写入消息之前不会等待任何来自服务器的响应,消息有丢失的风险，但是速度最快 |
+| acks=1（默认值） | 只要集群首领节点收到消息，生产者就会收到一个来自服务器的成功响应 |
+| acks=all         | 只有当所有参与赋值的节点全部收到消息时，生产者才会收到一个来自服务器的成功响应 |
+
+- retries
+
+![image-20210530224406689](/Users/yangluheng/Documents/项目/资料/day06-kafka及异步通知文章上下架/kafka及异步通知文章上下架.assets\image-20210530224406689.png)
+
+生产者从服务器收到的错误有可能是临时性错误，在这种情况下，retries参数的值决定了生产者可以重发消息的次数，如果达到这个次数，生产者会放弃重试返回错误，默认情况下，生产者会在每次重试之间等待100ms
+
+代码中配置方式：
+
+```java
+//重试次数
+prop.put(ProducerConfig.RETRIES_CONFIG,10);
+```
+
+- 消息压缩
+
+默认情况下， 消息发送时不会被压缩。
+
+代码中配置方式：
+
+```java
+//数据压缩
+prop.put(ProducerConfig.COMPRESSION_TYPE_CONFIG,"lz4");
+```
+
+| **压缩算法** | **说明**                                                     |
+| ------------ | ------------------------------------------------------------ |
+| snappy       | 占用较少的  CPU，  却能提供较好的性能和相当可观的压缩比， 如果看重性能和网络带宽，建议采用 |
+| lz4          | 占用较少的 CPU， 压缩和解压缩速度较快，压缩比也很客观        |
+| gzip         | 占用较多的  CPU，但会提供更高的压缩比，网络带宽有限，可以使用这种算法 |
+
+使用压缩可以降低网络传输开销和存储开销，而这往往是向 Kafka 发送消息的瓶颈所在。
+
+## 8.kafka消费者详解
+
+### 8.1消费者组
+
+![image-20210530224706747](/Users/yangluheng/Documents/项目/资料/day06-kafka及异步通知文章上下架/kafka及异步通知文章上下架.assets\image-20210530224706747.png)
+
+- 消费者组（Consumer Group） ：指的就是由一个或多个消费者组成的群体
+
+- 一个发布在Topic上消息被分发给此消费者组中的一个消费者
+
+  - 所有的消费者都在一个组中，那么这就变成了queue模型
+
+  - 所有的消费者都在不同的组中，那么就完全变成了发布-订阅模型
+
+### 8.2消息有序性
+
+应用场景：
+
+- 即时消息中的单对单聊天和群聊，保证发送方消息发送顺序与接收方的顺序一致
+
+- 充值转账两个渠道在同一个时间进行余额变更，短信通知必须要有顺序
+
+![image-20210530224903891](/Users/yangluheng/Documents/项目/资料/day06-kafka及异步通知文章上下架/kafka及异步通知文章上下架.assets\image-20210530224903891.png)
+
+topic分区中消息只能由消费者组中的唯一一个消费者处理，所以消息肯定是按照先后顺序进行处理的。但是它也仅仅是保证Topic的一个分区顺序处理，不能保证跨分区的消息先后处理顺序。 所以，如果你想要顺序的处理Topic的所有消息，那就只提供一个分区。
+
+### 8.3提交和偏移量
+
+kafka不会像其他JMS队列那样需要得到消费者的确认，消费者可以使用kafka来追踪消息在分区的位置（偏移量）
+
+消费者会往一个叫做_consumer_offset的特殊主题发送消息，消息里包含了每个分区的偏移量。如果消费者发生崩溃或有新的消费者加入群组，就会触发再均衡
+
+![image-20210530225021266](/Users/yangluheng/Documents/项目/资料/day06-kafka及异步通知文章上下架/kafka及异步通知文章上下架.assets\image-20210530225021266.png)
+
+正常的情况
+
+![image-20210530224959350](/Users/yangluheng/Documents/项目/资料/day06-kafka及异步通知文章上下架/kafka及异步通知文章上下架.assets\image-20210530224959350.png)
+
+如果消费者2挂掉以后，会发生再均衡，消费者2负责的分区会被其他消费者进行消费
+
+再均衡后不可避免会出现一些问题
+
+问题一：
+
+![image-20210530225215337](/Users/yangluheng/Documents/项目/资料/day06-kafka及异步通知文章上下架/kafka及异步通知文章上下架.assets\image-20210530225215337.png)
+
+如果提交偏移量小于客户端处理的最后一个消息的偏移量，那么处于两个偏移量之间的消息就会被重复处理。
+
+
+
+问题二：
+
+![image-20210530225239897](/Users/yangluheng/Documents/项目/资料/day06-kafka及异步通知文章上下架/kafka及异步通知文章上下架.assets\image-20210530225239897.png)
+
+如果提交的偏移量大于客户端的最后一个消息的偏移量，那么处于两个偏移量之间的消息将会丢失。
+
+
+
+如果想要解决这些问题，还要知道目前kafka提交偏移量的方式：
+
+提交偏移量的方式有两种，分别是自动提交偏移量和手动提交
+
+- 自动提交偏移量
+
+当enable.auto.commit被设置为true，提交方式就是让消费者自动提交偏移量，每隔5秒消费者会自动把从poll()方法接收的最大偏移量提交上去
+
+- 手动提交 ，当enable.auto.commit被设置为false可以有以下三种提交方式
+
+  - 提交当前偏移量（同步提交）
+
+  - 异步提交
+
+  - 同步和异步组合提交
+
+
+
+1.提交当前偏移量（同步提交）
+
+把`enable.auto.commit`设置为false,让应用程序决定何时提交偏移量。使用commitSync()提交偏移量，commitSync()将会提交poll返回的最新的偏移量，所以在处理完所有记录后要确保调用了commitSync()方法。否则还是会有消息丢失的风险。
+
+只要没有发生不可恢复的错误，commitSync()方法会一直尝试直至提交成功，如果提交失败也可以记录到错误日志里。
+
+```java
+while (true){
+    ConsumerRecords<String, String> records = consumer.poll(Duration.ofMillis(1000));
+    for (ConsumerRecord<String, String> record : records) {
+        System.out.println(record.value());
+        System.out.println(record.key());
+        try {
+            consumer.commitSync();//同步提交当前最新的偏移量
+        }catch (CommitFailedException e){
+            System.out.println("记录提交失败的异常："+e);
+        }
+
+    }
+}
+```
+
+2.异步提交
+
+手动提交有一个缺点，那就是当发起提交调用时应用会阻塞。当然我们可以减少手动提交的频率，但这个会增加消息重复的概率（和自动提交一样）。另外一个解决办法是，使用异步提交的API。
+
+```java
+while (true){
+    ConsumerRecords<String, String> records = consumer.poll(Duration.ofMillis(1000));
+    for (ConsumerRecord<String, String> record : records) {
+        System.out.println(record.value());
+        System.out.println(record.key());
+    }
+    consumer.commitAsync(new OffsetCommitCallback() {
+        @Override
+        public void onComplete(Map<TopicPartition, OffsetAndMetadata> map, Exception e) {
+            if(e!=null){
+                System.out.println("记录错误的提交偏移量："+ map+",异常信息"+e);
+            }
+        }
+    });
+}
+```
+
+3.同步和异步组合提交
+
+异步提交也有个缺点，那就是如果服务器返回提交失败，异步提交不会进行重试。相比较起来，同步提交会进行重试直到成功或者最后抛出异常给应用。异步提交没有实现重试是因为，如果同时存在多个异步提交，进行重试可能会导致位移覆盖。
+
+举个例子，假如我们发起了一个异步提交commitA，此时的提交位移为2000，随后又发起了一个异步提交commitB且位移为3000；commitA提交失败但commitB提交成功，此时commitA进行重试并成功的话，会将实际上将已经提交的位移从3000回滚到2000，导致消息重复消费。
+
+```java
+try {
+    while (true){
+        ConsumerRecords<String, String> records = consumer.poll(Duration.ofMillis(1000));
+        for (ConsumerRecord<String, String> record : records) {
+            System.out.println(record.value());
+            System.out.println(record.key());
+        }
+        consumer.commitAsync();
+    }
+}catch (Exception e){+
+    e.printStackTrace();
+    System.out.println("记录错误信息："+e);
+}finally {
+    try {
+        consumer.commitSync();
+    }finally {
+        consumer.close();
+    }
+}
+```
+
