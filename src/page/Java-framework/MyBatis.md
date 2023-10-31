@@ -94,7 +94,17 @@ MyBatis 使用 JDK 的动态代理，为需要拦截的接口生成代理对象�
 
 实现 MyBatis 的 `Interceptor` 接口并复写 `intercept()` 方法，然后在给插件编写注解，指定要拦截哪一个接口的哪些方法即可，在配置文件中配置编写的插件。
 
+### MybatisPlus
 
+```java
+@Bean
+public MybatisPlusInterceptor mybatisPlusInterceptor() {
+	MybatisPlusInterceptor interceptor = new MybatisPlusInterceptor();
+  // 配置分页插件
+  interceptor.addInnerInterceptor(new PaginationInnerInterceptor(DbType.MYSQL));
+  return interceptor;
+}
+```
 
 
 
