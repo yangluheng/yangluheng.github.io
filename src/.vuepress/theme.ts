@@ -48,7 +48,7 @@ export default hopeTheme({
       // sidebar
       sidebar: zhSidebar,
 
-      footer: "© 2023-present 鲁ICP备"<a href="https://beian.miit.gov.cn" target="_blank"> 19028049</a>"号",
+      footer: <a href="https://beian.miit.gov.cn" target="_blank">© 2023-present 鲁ICP备19028049号</a>,
 
       displayFooter: true,
 
