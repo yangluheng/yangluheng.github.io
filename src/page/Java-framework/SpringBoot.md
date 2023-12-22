@@ -53,6 +53,16 @@ Spring Boot提供了各种条件注解如@ConditionalOnClass、@ConditionalOnMis
 
 
 
+**总体流程：**
+
+1、引入Starter组件
+
+2、@EnableAutoConfiguration注解通过@Import注解导入AutoConfigurationImportSelector类（@Import注解可以导入配置类或者Bean到当前类中）。
+
+3、SpringBoot基于约定去Starter组件的路径下（META-INF/spring.factories）去找配置类
+
+4、SpringBoot使用AutoConfigurationImportSelector类中getCandidateConfigurations去导入这些配置类，并根据@Conditional动态加载配置类里面的Bean到容器
+
 参考：https://javaguide.cn/system-design/framework/spring/spring-boot-auto-assembly-principles.html#autoconfigurationimportselector-%E5%8A%A0%E8%BD%BD%E8%87%AA%E5%8A%A8%E8%A3%85%E9%85%8D%E7%B1%BB
 
 
@@ -207,3 +217,131 @@ Spring Boot CLI是一个命令行使用Spring Boot的客户端工具；主要功
 actuator是Spring Boot的监控插件，本身提供了很多接口可以获取当前项目的各项运行状态指标。
 
 参考：https://mp.weixin.qq.com/s?__biz=Mzg2OTA0Njk0OA==&mid=2247485568&idx=2&sn=c5ba880fd0c5d82e39531fa42cb036ac&chksm=cea2474bf9d5ce5dcbc6a5f6580198fdce4bc92ef577579183a729cb5d1430e4994720d59b34&token=1729829670&lang=zh_CN#rd
+
+
+
+
+
+## 9.常用注解
+
+![](http://www.img.youngxy.top/Java/fig/%E5%B8%B8%E7%94%A8%E6%B3%A8%E8%A7%A3.png)
+
+
+
+#### @Async 注解
+
+对于异步方法调用，从Spring3开始提供了@Async注解，该注解可以被标注在方法上，以便异步地调用该方法。调用者将在调用时立即返回，方法的实际执行将提交给Spring TaskExecutor的任务中，由指定的线程池中的线程执行。
+
+**同步**：同步就是整个处理过程顺序执行，当各个过程都执行完毕，并返回结果。
+
+**异步**：异步调用则是只是发送了调用的指令，调用者无需等待被调用的方法完全执行完毕；而是继续执行下面的流程。例如， 在某个调用中，需要顺序调用 A, B, C三个过程方法；如他们都是同步调用，则需要将他们都顺序执行完毕之后，方算作过程执行完毕；如B为一个异步的调用方法，则在执行完A之后，调用B，并不等待B完成，而是执行开始调用C，待C执行完毕之后，就意味着这个过程执行完毕了。在Java中，一般在处理类似的场景之时，都是基于创建独立的线程去完成相应的异步调用逻辑，通过主线程和不同的业务子线程之间的执行流程，从而在启动独立的线程之后，主线程继续执行而不会产生停滞等待的情况。
+
+**异步的方法有：**
+
+1、 最简单的异步调用，返回值为void
+ 2、 带参数的异步调用，异步方法可以传入参数
+ 3、 存在返回值，常调用返回Future
+
+##### @Async应用默认线程池
+
+Spring应用默认的线程池，指在@Async注解在使用时，不指定线程池的名称。查看源码，@Async的默认线程池为**SimpleAsyncTaskExecutor**。
+
+##### @Async应用自定义线程池
+
+自定义线程池，可对系统中线程池更加细粒度的控制，方便调整线程池大小配置，线程执行异常控制和处理。
+
+```java
+@Configuration
+@EnableAsync
+public class ThreadPoolConfig {
+
+    @Bean("taskExecutor")
+    public ThreadPoolTaskExecutor taskExecutor() {
+        ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
+        // 设置核心线程数
+        executor.setCorePoolSize(10);
+        // 设置最大线程数
+        executor.setMaxPoolSize(20);
+        // 设置队列容量
+        executor.setQueueCapacity(100);
+        // 设置线程名前缀
+        executor.setThreadNamePrefix("CrawlTaskExecutor-");
+        executor.initialize();
+        return executor;
+    }
+}
+
+@Component
+@Slf4j
+public class CrawlTaskConsumer {
+    @Autowired
+    private ThreadPoolCrawler threadPoolCrawler;
+
+    @Async("taskExecutor")
+    @KafkaListener(topics = KAFKA_CONSTANTS.KAKFA_CONSTANTS_TOPIC, groupId = KAFKA_CONSTANTS.KAKFA_CONSTANTS_GROUP)
+    public CompletableFuture<CrawlTask> consumeCrawlTask(ConsumerRecord<String, String> record, Consumer consumer) {
+        CrawlTask crawlTask = JSON.parseObject(record.value(), CrawlTask.class);
+        System.out.println("Received crawl task: " + crawlTask.toString());
+        threadPoolCrawler.crawl(crawlTask);
+        //手动提交偏移量
+        consumer.commitAsync();
+        return CompletableFuture.completedFuture(crawlTask);
+    }
+}
+```
+
+
+
+
+
+## 10.SpringBoot的启动流程是怎样的？
+
+1. 从`spring.factories`配置文件中**加载**`**EventPublishingRunListener**`**对象**，该对象拥有`SimpleApplicationEventMulticaster`属性，即在SpringBoot启动过程的不同阶段用来发射内置的生命周期事件;
+2. **准备环境变量**，包括系统变量，环境变量，命令行参数，默认变量，`servlet`相关配置变量，随机值以及配置文件（比如`application.properties`）等;
+3. 控制台**打印SpringBoot的**`**bannner**`**标志**；
+4. **根据不同类型环境创建不同类型的**`**applicationcontext**`**容器**，因为这里是`servlet`环境，所以创建的是`AnnotationConfigServletWebServerApplicationContext`容器对象；
+5. 从`spring.factories`配置文件中**加载**`**FailureAnalyzers**`**对象**,用来报告SpringBoot启动过程中的异常；
+6. **为刚创建的容器对象做一些初始化工作**，准备一些容器属性值等，对`ApplicationContext`应用一些相关的后置处理和调用各个`ApplicationContextInitializer`的初始化方法来执行一些初始化逻辑等；
+7. **刷新容器**，这一步至关重要。比如调用`bean factory`的后置处理器，注册`BeanPostProcessor`后置处理器，初始化事件广播器且广播事件，初始化剩下的单例`bean`和SpringBoot创建内嵌的`Tomcat`服务器等等重要且复杂的逻辑都在这里实现，主要步骤可见代码的注释，关于这里的逻辑会在以后的spring源码分析专题详细分析；
+8. **执行刷新容器后的后置处理逻辑**，注意这里为空方法；
+9. **调用**`**ApplicationRunner**`**和**`**CommandLineRunner**`**的run方法**，我们实现这两个接口可以在spring容器启动后需要的一些东西比如加载一些业务数据等;
+10. **报告启动异常**，即若启动过程中抛出异常，此时用`FailureAnalyzers`来报告异常;
+11. 最终**返回容器对象**，这里调用方法没有声明对象来接收。
+
+参考：https://blog.csdn.net/yuechuzhixing/article/details/124775218
+
+## 11.WebMvcConfigurer
+
+WebMvcConfigurer配置类其实是`Spring`内部的一种配置方式，采用`JavaBean`的形式来代替传统的`xml`配置文件形式进行针对框架个性化定制，可以自定义一些Handler，Interceptor，ViewResolver，MessageConverter。基于java-based方式的spring mvc配置，需要创建一个**配置**类并实现**`WebMvcConfigurer`** 接口；
+
+在Spring Boot 1.5版本都是靠重写**WebMvcConfigurerAdapter**的方法来添加自定义拦截器，消息转换器等。SpringBoot 2.0 后，该类被标记为@Deprecated（弃用）。官方推荐直接实现WebMvcConfigurer或者直接继承WebMvcConfigurationSupport，方式一实现WebMvcConfigurer接口（推荐），方式二继承WebMvcConfigurationSupport类。
+
+### **常用的方法：**
+
+```java
+ /* 拦截器配置 */
+void addInterceptors(InterceptorRegistry var1);
+/* 视图跳转控制器 */
+void addViewControllers(ViewControllerRegistry registry);
+/**
+     *静态资源处理
+**/
+void addResourceHandlers(ResourceHandlerRegistry registry);
+/* 默认静态资源处理器 */
+void configureDefaultServletHandling(DefaultServletHandlerConfigurer configurer);
+/**
+     * 这里配置视图解析器
+ **/
+void configureViewResolvers(ViewResolverRegistry registry);
+/* 配置内容裁决的一些选项*/
+void configureContentNegotiation(ContentNegotiationConfigurer configurer);
+/** 解决跨域问题 **/
+public void addCorsMappings(CorsRegistry registry) ;
+```
+
+### addInterceptors：拦截器
+
+- addInterceptor：需要一个实现HandlerInterceptor接口的拦截器实例
+- addPathPatterns：用于设置拦截器的过滤路径规则；`addPathPatterns("/**")`对所有请求都拦截
+- excludePathPatterns：用于设置不需要拦截的过滤规则
+- 拦截器主要用途：进行用户登录状态的拦截，日志的拦截等。

@@ -5,6 +5,92 @@ order: 1
 description: 消息中间件
 ---
 
+**消息队列是什么？**
+
+消息队列是在消息的传输过程中保存消息的容器，简单点理解就是传递消息的队列，具备先进先出的特点，一般用于异步、解耦、流量削锋等问题，实现高性能、高可用、高扩展的架构。一个消息队列可以被一个或多个消费者消费，一般包含以下元素：
+
+> Producer：消息生产者，负责产生和发送消息到 Broker。
+> Broker：消息处理中心，负责消息存储、确认、重试等，一般其中会包含多个 Queue。
+> Consumer：消息消费者，负责从 Broker 中获取消息，并进行相应处理。 
+
+**消息队列应用场景**
+
+常见的消息队列使用场景有 6 个：
+
+> 应用解耦：消息队列减少了服务之间的耦合性，不同的服务可以通过消息队列进行通信，而不用关心彼此的实现细节。
+> 异步处理：消息队列本身是异步的，它允许接收者在消息发送很长时间后再取回消息。
+> 流量削锋：当上下游系统处理能力存在差距的时候，利用消息队列做一个通用的”载体”，在下游有能力处理的时候，再进行分发与处理。
+> 日志处理：将消息队列用在日志处理中，比如 Kafka 的应用，解决大量日志传输的问题。
+> 消息通讯：消息队列一般都内置了高效的通信机制，因此也可以用在纯消息通讯，比如实现聊天室等。
+> 消息广播：如果没有消息队列，每当一个新业务方接入，都要接入一次新接口。有了消息队列，我们只需要关心消息是否送达了队列，至于谁订阅，是下游的事，无疑极大地减少了开发和联调的工作量。 
+
+比较核心的有 3 个：解耦、异步、削峰，下面着重讲下：
+
+**解耦**
+
+假设在没有消息队列的情况下，现在有上游服务 A 用来发布消息，下游服务 B、C 用来接收服务 A 的消息。但随着业务需要，现在有服务 D、E、F 需要接收服务 A 的消息，那么就出现问题了，每次新加入服务都要改一次代码，可想而知这是极大的工作量。
+
+![](http://www.img.youngxy.top/Java/fig/mq1.png)
+
+如果引入消息队列，那就好办了，只需要下游服务自己订阅消息队列，而无需改动服务 A 的代码。
+
+![](http://www.img.youngxy.top/Java/fig/mq2.png)
+
+**异步**
+
+先来看没有消息队列的场景下。
+
+服务 A 的某个接口接收到请求，分别需要在服务A、服务B、服务C、服务D进行写库。假设用户发起请求到服务 A 耗时 10ms，自己写库需要 50ms，在服务 B 写库需要 250ms，在服务 C 写库需要 300ms，在服务 D 写库需要400ms，在没有消息队列的情况下，也就是同步操作，总耗时会是 10 + 50ms + 250ms + 300ms + 400ms = 1.01s。用户发送个请求，结果感觉有点卡顿，响应的非常慢，任谁都是很难忍受的。
+![](http://www.img.youngxy.top/Java/fig/mq3.png)
+
+如果使用了消息队列，那么服务 A 只需要把对服务A、B、C、D  进行写库的操作分别放进四个消息队列，假如用户发起请求到服务器耗时是10ms，发送消息到四个消息队列的耗时是10ms，那么总耗时就是 20 ms  。用户点击了按钮后立马返回，没有卡顿现象，体验效果就会有极大的提升了。
+
+![](http://www.img.youngxy.top/Java/fig/mq4.png)
+
+一般接口同步处理时间很长，不能通过水平扩容来解决，且业务场景允许异步，就可以使用异步解决，比如文件上传下载受限于用户的网络带宽因素，扩容也无用，以及上述同步操作耗时长等情况，都可以先放进消息队列，等服务再进行拉取消费。
+
+**削峰**
+
+在淘宝双十一活动日，特别是 0 点的秒杀活动高峰期时，接口流量会飙升，远远高于平时，就像一个山峰，没有做好处理的话，在高峰期数据库就可能被流量打死，从而导致整个服务奔溃。如果为了在高峰期能顶住流量而常备高流量设备，会有极大的成本浪费。如果是在要高峰期前进行临时服务扩容，很可能会出现许多扩容问题，没有那么简单。
+
+使用消息队列的话，就可以将高峰期过多的流量请求放进消息队列，等高峰期过后，服务再慢慢进行处理，就不会出现峰值流量了，而是一个相对平稳的状态。
+
+举个例子：
+
+> 大量的用户在中午高峰期的时候，每秒有 4k 个请求，那么每秒就有 4k 个请求放到 MQ 里。
+>
+> 服务A 每秒只能处理 2k 个请求，因为 Mysql 每秒最多处理 2k 个请求。
+>
+> 服务A 就每秒从 MQ 拉取 2k 个请求进行处理，不会超过自己每秒能处理的最大请求量，所以高峰期服务 A 就不会挂掉。
+>
+> 对于MQ，每秒 4k 个请求进来，但是却只有 2k 个请求出去，导致在高峰期 1h 内可能有几十万的请求积压在 MQ 中。这个短暂的高峰期请求积压是可以接受的，因为过了这个时间点，每秒就 100 个请求进 MQ，但这时服务 A 还是会按照每秒 2k 的速度处理 MQ 积压的请求。
+>
+> 所以，高峰期一过，服务 A 就会快速的将 MQ 积压的消息处理掉。
+
+![](http://www.img.youngxy.top/Java/fig/mq5.png)
+
+
+
+**消息队列对比**
+
+消息队列有 ActiveMQ、ZeroMQ、RabbitMQ、RocketMQ、Kafka，其中 ZeroMQ 太过轻量，主要用于学习，实际是不会应用到生产，所以主要对比 Kafka、RocketMQ、RabbitMQ、ActiveMQ 这四种 MQ。
+
+![](http://www.img.youngxy.top/Java/fig/mq6.png)
+
+![](http://www.img.youngxy.top/Java/fig/mq7.png)
+
+Kafka 和 RocketMQ 都支持 10w 级别的高吞吐量。
+
+Kafka 一开始的目的就是用于日志收集和传输，适合有大量数据产生的互联网业务，特别是大数据领域的实时计算、日志采集等场景，用 Kafka 绝对没错，社区活跃度高，业内标准。
+
+RocketMQ 特别适用于金融互联网领域这类对于可靠性要求很高的场景，比如订单交易等，而且 RocketMQ 是阿里出品的，经历过那么多次淘宝双十一的考验，大品牌，在稳定性值得信赖。但如果阿里不再维护这个技术了，社区有可能突然黄掉的风险。因此如果公司对自己的技术实力有自信，基础架构研发实力较强，推荐用 RocketMQ。
+
+RabbitMQ 适用于公司对外提供能力，可能会有很多主题接入的中台业务场景，毕竟它是百万级主题数的。它的时效性是毫秒级的，但实际毫秒级和微秒级在感知上没有什么太大的区别，所以它的这一大优点并不太会作为考量标准。同时，它的功能是比较完善的，开源社区活跃度高，能解决开发中遇到的bug，所以万级别数据量业务场景的小公司可以优先选择功能完善的RabbitMQ。它的缺点就是用 Erlang 语言编写，所以很多开发人员很难去看懂源码并进行二次开发和维护，也就是说对于公司来说可能处于不可控的状态。
+
+ActiveMQ 现在很少有人用，没怎么经过大规模吞吐量场景的考验，社区不怎么活跃，官方社区现在对 ActiveMQ 5.x 维护也越来越少，所以不推荐使用。
+
+
+
 **Kafka 核心组件的基础概念：**
 
 1)Producer：即消息生产者，向 Kafka Broker 发消息的客户端。
@@ -323,3 +409,279 @@ producer.send(record, new Callback() {
 ```
 
 参考：https://ost.51cto.com/posts/11148
+
+
+
+## 6.kafka高可用设计
+
+### 6.1集群
+
+![](http://www.img.youngxy.top/Java/fig/kafka%E9%9B%86%E7%BE%A4.png)
+
+- Kafka 的服务器端由被称为 Broker 的服务进程构成，即一个 Kafka 集群由多个 Broker 组成
+
+- 这样如果集群中某一台机器宕机，其他机器上的 Broker 也依然能够对外提供服务。这其实就是 Kafka 提供高可用的手段之一
+
+### 6.2备份机制(Replication）
+
+![](http://www.img.youngxy.top/Java/fig/kafka%E5%A4%87%E4%BB%BD%E6%9C%BA%E5%88%B6.png)
+
+Kafka 中消息的备份又叫做 副本（Replica）
+
+Kafka 定义了两类副本：
+
+- 领导者副本（Leader Replica）
+
+- 追随者副本（Follower Replica）
+
+**同步方式**
+
+![](http://www.img.youngxy.top/Java/fig/kafka%E5%90%8C%E6%AD%A5%E6%96%B9%E5%BC%8F.png)
+
+ISR（in-sync replica）需要同步复制保存的follower
+
+
+
+如果leader失效后，需要选出新的leader，选举的原则如下：
+
+第一：选举时优先从ISR中选定，因为这个列表中follower的数据是与leader同步的
+
+第二：如果ISR列表中的follower都不行了，就只能从其他follower中选取
+
+
+
+极端情况，就是所有副本都失效了，这时有两种方案
+
+第一：等待ISR中的一个活过来，选为Leader，数据可靠，但活过来的时间不确定
+
+第二：选择第一个活过来的Replication，不一定是ISR中的，选为leader，以最快速度恢复可用性，但数据不一定完整
+
+## 7.kafka生产者详解 
+
+### 7.1发送类型
+
+- 同步发送
+
+  使用send()方法发送，它会返回一个Future对象，调用get()方法进行等待，就可以知道消息是否发送成功
+
+```java
+RecordMetadata recordMetadata = producer.send(kvProducerRecord).get();
+System.out.println(recordMetadata.offset());
+```
+
+- 异步发送
+
+  调用send()方法，并指定一个回调函数，服务器在返回响应时调用函数
+
+```java
+//异步消息发送
+producer.send(kvProducerRecord, new Callback() {
+    @Override
+    public void onCompletion(RecordMetadata recordMetadata, Exception e) {
+        if(e != null){
+            System.out.println("记录异常信息到日志表中");
+        }
+        System.out.println(recordMetadata.offset());
+    }
+});
+```
+
+### 7.2参数详解
+
+- ack
+
+![](http://www.img.youngxy.top/Java/fig/kafka%E5%8F%82%E6%95%B0ack.png)
+
+代码的配置方式：
+
+```java
+//ack配置  消息确认机制
+prop.put(ProducerConfig.ACKS_CONFIG,"all");
+```
+
+参数的选择说明
+
+| **确认机制**     | **说明**                                                     |
+| ---------------- | ------------------------------------------------------------ |
+| acks=0           | 生产者在成功写入消息之前不会等待任何来自服务器的响应,消息有丢失的风险，但是速度最快 |
+| acks=1（默认值） | 只要集群首领节点收到消息，生产者就会收到一个来自服务器的成功响应 |
+| acks=all         | 只有当所有参与赋值的节点全部收到消息时，生产者才会收到一个来自服务器的成功响应 |
+
+- retries
+
+![](http://www.img.youngxy.top/Java/fig/kafka%E5%8F%82%E6%95%B0retries.png)
+
+生产者从服务器收到的错误有可能是临时性错误，在这种情况下，retries参数的值决定了生产者可以重发消息的次数，如果达到这个次数，生产者会放弃重试返回错误，默认情况下，生产者会在每次重试之间等待100ms
+
+代码中配置方式：
+
+```java
+//重试次数
+prop.put(ProducerConfig.RETRIES_CONFIG,10);
+```
+
+- 消息压缩
+
+默认情况下， 消息发送时不会被压缩。
+
+代码中配置方式：
+
+```java
+//数据压缩
+prop.put(ProducerConfig.COMPRESSION_TYPE_CONFIG,"lz4");
+```
+
+| **压缩算法** | **说明**                                                     |
+| ------------ | ------------------------------------------------------------ |
+| snappy       | 占用较少的  CPU，  却能提供较好的性能和相当可观的压缩比， 如果看重性能和网络带宽，建议采用 |
+| lz4          | 占用较少的 CPU， 压缩和解压缩速度较快，压缩比也很客观        |
+| gzip         | 占用较多的  CPU，但会提供更高的压缩比，网络带宽有限，可以使用这种算法 |
+
+使用压缩可以降低网络传输开销和存储开销，而这往往是向 Kafka 发送消息的瓶颈所在。
+
+## 8.kafka消费者详解
+
+### 8.1消费者组
+
+![](http://www.img.youngxy.top/Java/fig/kafka%E6%B6%88%E8%B4%B9%E8%80%85%E7%BB%84.png)
+
+- 消费者组（Consumer Group） ：指的就是由一个或多个消费者组成的群体
+
+- 一个发布在Topic上消息被分发给此消费者组中的一个消费者
+
+  - 所有的消费者都在一个组中，那么这就变成了queue模型
+
+  - 所有的消费者都在不同的组中，那么就完全变成了发布-订阅模型
+
+### 8.2消息有序性
+
+应用场景：
+
+- 即时消息中的单对单聊天和群聊，保证发送方消息发送顺序与接收方的顺序一致
+
+- 充值转账两个渠道在同一个时间进行余额变更，短信通知必须要有顺序
+
+![](http://www.img.youngxy.top/Java/fig/kafka%E6%B6%88%E6%81%AF%E6%9C%89%E5%BA%8F%E6%80%A7.png)
+
+topic分区中消息只能由消费者组中的唯一一个消费者处理，所以消息肯定是按照先后顺序进行处理的。但是它也仅仅是保证Topic的一个分区顺序处理，不能保证跨分区的消息先后处理顺序。 所以，如果你想要顺序的处理Topic的所有消息，那就只提供一个分区。
+
+### 8.3提交和偏移量
+
+kafka不会像其他JMS队列那样需要得到消费者的确认，消费者可以使用kafka来追踪消息在分区的位置（偏移量）
+
+消费者会往一个叫做_consumer_offset的特殊主题发送消息，消息里包含了每个分区的偏移量。如果消费者发生崩溃或有新的消费者加入群组，就会触发再均衡
+
+正常的情况
+
+![](http://www.img.youngxy.top/Java/fig/kafka%E6%8F%90%E4%BA%A4%E5%92%8C%E5%81%8F%E7%A7%BB%E9%87%8F1.png)
+
+如果消费者2挂掉以后，会发生再均衡，消费者2负责的分区会被其他消费者进行消费
+
+再均衡后不可避免会出现一些问题
+
+问题一：
+
+![](http://www.img.youngxy.top/Java/fig/kafka%E6%8F%90%E4%BA%A4%E5%81%8F%E7%A7%BB%E9%87%8F2.png)
+
+如果提交偏移量小于客户端处理的最后一个消息的偏移量，那么处于两个偏移量之间的消息就会被重复处理。
+
+
+
+问题二：
+
+![](http://www.img.youngxy.top/Java/fig/kafka%E6%8F%90%E4%BA%A4%E5%81%8F%E7%A7%BB%E9%87%8F3.png)
+
+如果提交的偏移量大于客户端的最后一个消息的偏移量，那么处于两个偏移量之间的消息将会丢失。
+
+
+
+如果想要解决这些问题，还要知道目前kafka提交偏移量的方式：
+
+提交偏移量的方式有两种，分别是自动提交偏移量和手动提交
+
+- 自动提交偏移量
+
+当enable.auto.commit被设置为true，提交方式就是让消费者自动提交偏移量，每隔5秒消费者会自动把从poll()方法接收的最大偏移量提交上去
+
+- 手动提交 ，当enable.auto.commit被设置为false可以有以下三种提交方式
+
+  - 提交当前偏移量（同步提交）
+
+  - 异步提交
+
+  - 同步和异步组合提交
+
+
+
+1.提交当前偏移量（同步提交）
+
+把`enable.auto.commit`设置为false,让应用程序决定何时提交偏移量。使用commitSync()提交偏移量，commitSync()将会提交poll返回的最新的偏移量，所以在处理完所有记录后要确保调用了commitSync()方法。否则还是会有消息丢失的风险。
+
+只要没有发生不可恢复的错误，commitSync()方法会一直尝试直至提交成功，如果提交失败也可以记录到错误日志里。
+
+```java
+while (true){
+    ConsumerRecords<String, String> records = consumer.poll(Duration.ofMillis(1000));
+    for (ConsumerRecord<String, String> record : records) {
+        System.out.println(record.value());
+        System.out.println(record.key());
+        try {
+            consumer.commitSync();//同步提交当前最新的偏移量
+        }catch (CommitFailedException e){
+            System.out.println("记录提交失败的异常："+e);
+        }
+
+    }
+}
+```
+
+2.异步提交
+
+手动提交有一个缺点，那就是当发起提交调用时应用会阻塞。当然我们可以减少手动提交的频率，但这个会增加消息重复的概率（和自动提交一样）。另外一个解决办法是，使用异步提交的API。
+
+```java
+while (true){
+    ConsumerRecords<String, String> records = consumer.poll(Duration.ofMillis(1000));
+    for (ConsumerRecord<String, String> record : records) {
+        System.out.println(record.value());
+        System.out.println(record.key());
+    }
+    consumer.commitAsync(new OffsetCommitCallback() {
+        @Override
+        public void onComplete(Map<TopicPartition, OffsetAndMetadata> map, Exception e) {
+            if(e!=null){
+                System.out.println("记录错误的提交偏移量："+ map+",异常信息"+e);
+            }
+        }
+    });
+}
+```
+
+3.同步和异步组合提交
+
+异步提交也有个缺点，那就是如果服务器返回提交失败，异步提交不会进行重试。相比较起来，同步提交会进行重试直到成功或者最后抛出异常给应用。异步提交没有实现重试是因为，如果同时存在多个异步提交，进行重试可能会导致位移覆盖。
+
+举个例子，假如我们发起了一个异步提交commitA，此时的提交位移为2000，随后又发起了一个异步提交commitB且位移为3000；commitA提交失败但commitB提交成功，此时commitA进行重试并成功的话，会将实际上将已经提交的位移从3000回滚到2000，导致消息重复消费。
+
+```java
+try {
+    while (true){
+        ConsumerRecords<String, String> records = consumer.poll(Duration.ofMillis(1000));
+        for (ConsumerRecord<String, String> record : records) {
+            System.out.println(record.value());
+            System.out.println(record.key());
+        }
+        consumer.commitAsync();
+    }
+}catch (Exception e){+
+    e.printStackTrace();
+    System.out.println("记录错误信息："+e);
+}finally {
+    try {
+        consumer.commitSync();
+    }finally {
+        consumer.close();
+    }
+}
+```
+

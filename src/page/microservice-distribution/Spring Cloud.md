@@ -146,6 +146,36 @@ OpenFeign远程调用，核心就是通过一系列的封装和处理，将以JA
 
 在微服务启动时，Feign会进行包扫描，对加@FeignClient注解的接口，按照注解的规则，创建远程接口的本地JDK  Proxy代理实例。然后，将这些本地Proxy代理实例，注入到Spring  IOC容器中。当远程接口的方法被调用，由Proxy代理实例去完成真正的远程访问，并且返回结果。
 
+### 4.1Feign与OpenFeign的区别
+
+- Feign是Spring  Cloud组件中一个轻量级RESTful的HTTP服务客户端，Feign内置了Ribbon，用来做客户端负载均衡，去调用服务注册中心的服务。Feign的使用方式是：使用Feign的注解定义接口，调用接口，就可以调用服务注册中心的服务。
+- OpenFeign是Spring  Cloud在Feign的基础上支持了SpringMVC的注解，如@RequestMapping等等。OpenFeign的@FeignClient可以解析SpringMVC的@RequestMapping注解下的接口，并通过动态代理的方式产生实现类。
+
+### 4.2Spring Cloud OpenFeign使用教程
+
+OpenFeignClient的pom依赖如下：
+
+```xml
+<dependency>
+    <groupId>org.springframework.cloud</groupId>
+    <artifactId>spring-cloud-starter-openfeign</artifactId>
+</dependency>
+```
+
+启动类上增加**@EnableFeignClients**注解，告诉框架扫描所有使用注解**@FeignClient**定义的feign客户端，并把feign客户端注册到IOC容器中。
+
+需要使用@FeignClient来注解一个interface，如下所示：
+
+```Java
+@FeignClient(value = "leadnews-article",fallback = IArticleClientFallback.class)
+public interface IArticleClient {
+    @PostMapping("/api/v1/article/save")
+    public ResponseResult saveArticle(@RequestBody ArticleDto articleDto);;
+}
+```
+
+其中@FeignClient中的value是要调用的服务的注册名。
+
 
 
 ## 5.什么是 Nacos？
