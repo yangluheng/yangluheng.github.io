@@ -48,7 +48,9 @@ export default hopeTheme({
       // sidebar
       sidebar: zhSidebar,
 
-      footer:<a href="https://github.com/Mister-Hope">Mr.Hope</a>,
+      footer: 2023-present 鲁ICP备19028049号,
+
+      // footer: <a href="https://beian.miit.gov.cn" target="_blank"> 2023-present 鲁ICP备19028049号</a>,
 
       displayFooter: true,
 
